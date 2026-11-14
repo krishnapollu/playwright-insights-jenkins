@@ -1,0 +1,9 @@
+node_modules/
+coverage/
+*.log
+test-results/
+playwright-insights/
+reporter/dist/
+jenkins-plugin/target/
+jenkins-plugin/work/
+*.tgz

@@ -1,0 +1,2 @@
+<?jelly escape-by-default='true'?>
+<div>Import Playwright Test manifests into Jenkins build and job views.</div>

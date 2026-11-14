@@ -1,0 +1,16 @@
+{
+  "name": "playwright-insights-contract",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "test": "node --test schema/contract.test.mjs reporter/integration.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "build:reporter": "tsc -p reporter/tsconfig.build.json"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^24.19.0",
+    "ajv": "8.20.0",
+    "typescript": "^5.9.3"
+  }
+}

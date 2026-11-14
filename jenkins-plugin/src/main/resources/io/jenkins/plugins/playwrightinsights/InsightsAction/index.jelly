@@ -1,0 +1,88 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
+  <l:layout title="Playwright Insights">
+    <l:main-panel>
+      <h1>Playwright Insights — ${it.buildName}</h1>
+      <j:if test="${!it.complete}"><p><strong>Partial run:</strong> totals may be incomplete. This run is not used as a comparison baseline.</p></j:if>
+      <j:if test="${it.testCount == 0}"><p>No tests were recorded in this run.</p></j:if>
+      <p>Started: ${it.startedAt} · Duration: ${it.durationMs} ms · Logical tests: ${it.testCount}</p>
+      <p>Expected: ${it.counts.expected} · Unexpected: ${it.counts.unexpected} · Flaky: ${it.counts.flaky} · Skipped: ${it.counts.skipped}</p>
+      <j:if test="${it.previousComparableBuild != ''}"><p>Previous comparable build: ${it.previousComparableBuild}</p></j:if>
+      <j:if test="${it.previousComparableBuild != ''}"><p>New failures: ${it.comparisonCounts.newFailures} · Continuing failures: ${it.comparisonCounts.continuingFailures} · Recovered: ${it.comparisonCounts.recovered} · Newly observed: ${it.comparisonCounts.newlyObserved} · Unclassified: ${it.comparisonCounts.unclassified}</p></j:if>
+      <j:forEach var="warning" items="${it.warnings}"><p>Import warning: ${warning}</p></j:forEach>
+
+      <h2>Projects</h2>
+      <table class="jenkins-table">
+        <thead><tr><th>Project</th><th>Expected</th><th>Unexpected</th><th>Flaky</th><th>Skipped</th></tr></thead>
+        <tbody>
+          <j:forEach var="project" items="${it.projectSummaries}">
+            <tr><td>${project.name}</td><td>${project.expected}</td><td>${project.unexpected}</td><td>${project.flaky}</td><td>${project.skipped}</td></tr>
+          </j:forEach>
+        </tbody>
+      </table>
+
+      <h2>Tests</h2>
+      <form method="get">
+        <div class="jenkins-form-item">
+          <label for="outcome">Outcome</label>
+          <select id="outcome" name="outcome">
+            <option value="">All</option>
+            <option value="unexpected">Unexpected</option>
+            <option value="flaky">Flaky</option>
+            <option value="expected">Expected</option>
+            <option value="skipped">Skipped</option>
+          </select>
+        </div>
+        <div class="jenkins-form-item">
+          <label for="project">Project</label>
+          <select id="project" name="project">
+            <option value="">All</option>
+            <j:forEach var="project" items="${it.projectSummaries}"><option value="${project.name}">${project.name}</option></j:forEach>
+          </select>
+        </div>
+        <div class="jenkins-form-item">
+          <label for="q">Title or file</label>
+          <input id="q" name="q" value="${it.query}"/>
+        </div>
+        <button class="jenkins-button" type="submit">Filter</button>
+      </form>
+      <table class="jenkins-table">
+        <thead><tr><th>Test</th><th>Project</th><th>Outcome</th><th>Duration</th></tr></thead>
+        <tbody>
+          <j:forEach var="test" items="${it.tests}">
+            <tr><td><a href="?test=${test.linkId}#test-detail">${test.title}</a></td><td>${test.projectId}</td><td>${test.outcome}</td><td>${test.durationMs} ms</td></tr>
+          </j:forEach>
+        </tbody>
+      </table>
+      <j:if test="${it.moreTests}"><a href="${it.nextPageUrl}">Next 100 tests</a></j:if>
+
+      <j:if test="${it.selectedTest != null}">
+        <h2 id="test-detail">Test detail: ${it.selectedTest.title}</h2>
+        <p>${it.selectedTest.file}:${it.selectedTest.line} · ${it.selectedTest.projectId} · Expected status: ${it.selectedTest.expectedStatus} · Outcome: ${it.selectedTest.outcome}</p>
+        <p>${it.classification}</p>
+        <h3>Recent comparable runs</h3>
+        <j:choose>
+          <j:when test="${it.history.size() == 0}"><p>No comparable history is available.</p></j:when>
+          <j:otherwise>
+            <ul><j:forEach var="entry" items="${it.history}"><li><a href="${rootURL}/${entry.url}">${entry.build}</a> — ${entry.outcome} (${entry.startedAt})</li></j:forEach></ul>
+          </j:otherwise>
+        </j:choose>
+        <j:if test="${it.selectedTest.attempts.size() == 0}"><p>No attempt data was recorded.</p></j:if>
+        <j:forEach var="attempt" items="${it.selectedTest.attempts}">
+          <h3>Attempt ${attempt.retry} — ${attempt.status} (${attempt.durationMs} ms)</h3>
+          <j:forEach var="error" items="${attempt.errors}">
+            <pre>${error.message}</pre>
+            <j:if test="${error.stack != null}"><pre>${error.stack}</pre></j:if>
+          </j:forEach>
+          <j:forEach var="attachment" items="${attempt.attachments}">
+            <j:set var="link" value="${it.artifactLink(attachment.path)}"/>
+            <j:choose>
+              <j:when test="${link != ''}"><a href="${rootURL}/${link}">${attachment.name}</a></j:when>
+              <j:otherwise><span>${attachment.name} (not archived)</span></j:otherwise>
+            </j:choose>
+          </j:forEach>
+        </j:forEach>
+      </j:if>
+    </l:main-panel>
+  </l:layout>
+</j:jelly>

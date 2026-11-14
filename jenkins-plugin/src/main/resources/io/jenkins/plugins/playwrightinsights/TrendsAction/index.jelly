@@ -1,0 +1,21 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
+  <l:layout title="Playwright Trends">
+    <l:main-panel>
+      <h1>Playwright Trends</h1>
+      <p>Last ten comparable complete runs retained by Jenkins.</p>
+      <j:choose>
+        <j:when test="${it.rows.size() == 0}"><p>No comparable runs are available. Configure a stable comparison key in the reporter.</p></j:when>
+        <j:otherwise>
+          <table class="jenkins-table">
+            <thead><tr><th>Build</th><th>Started</th><th>Expected</th><th>Unexpected</th><th>Flaky</th><th>Skipped</th></tr></thead>
+            <tbody><j:forEach var="row" items="${it.rows}"><tr>
+              <td><a href="${rootURL}/${row.url}playwright-insights/">${row.build}</a></td>
+              <td>${row.startedAt}</td><td>${row.expected}</td><td>${row.unexpected}</td><td>${row.flaky}</td><td>${row.skipped}</td>
+            </tr></j:forEach></tbody>
+          </table>
+        </j:otherwise>
+      </j:choose>
+    </l:main-panel>
+  </l:layout>
+</j:jelly>

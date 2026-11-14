@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0.0",
+  "producer": { "name": "playwright-jenkins-insights", "version": "0.1.0" },
+  "run": {
+    "id": "fixture-outcomes",
+    "startedAt": "2026-11-14T20:00:00.000Z",
+    "durationMs": 9000,
+    "complete": true,
+    "comparisonKey": "sample-suite",
+    "metadata": { "branch": "main", "selection": "all" }
+  },
+  "projects": [{ "id": "chromium", "name": "chromium" }],
+  "tests": [
+    {
+      "id": "pass-1", "projectId": "chromium", "file": "tests/example.spec.ts", "line": 1,
+      "titlePath": ["examples", "passes"], "repeatEachIndex": 0,
+      "expectedStatus": "passed", "outcome": "expected",
+      "attempts": [{ "retry": 0, "status": "passed", "durationMs": 100, "errors": [], "attachments": [] }]
+    },
+    {
+      "id": "fail-1", "projectId": "chromium", "file": "tests/example.spec.ts", "line": 2,
+      "titlePath": ["examples", "fails"], "repeatEachIndex": 0,
+      "expectedStatus": "passed", "outcome": "unexpected",
+      "attempts": [{ "retry": 0, "status": "failed", "durationMs": 200, "errors": [{ "message": "Assertion failed", "stack": "at example.spec.ts:2" }], "attachments": [{ "name": "screenshot", "contentType": "image/png", "path": "test-results/fails/screenshot.png" }] }]
+    },
+    {
+      "id": "flake-1", "projectId": "chromium", "file": "tests/example.spec.ts", "line": 3,
+      "titlePath": ["examples", "passes on retry"], "repeatEachIndex": 0,
+      "expectedStatus": "passed", "outcome": "flaky",
+      "attempts": [
+        { "retry": 0, "status": "timedOut", "durationMs": 1000, "errors": [{ "message": "Timeout" }], "attachments": [{ "name": "trace", "contentType": "application/zip", "path": "test-results/flake/trace.zip" }] },
+        { "retry": 1, "status": "passed", "durationMs": 300, "errors": [], "attachments": [] }
+      ]
+    },
+    {
+      "id": "xfail-1", "projectId": "chromium", "file": "tests/example.spec.ts", "line": 4,
+      "titlePath": ["examples", "expected failure"], "repeatEachIndex": 0,
+      "expectedStatus": "failed", "outcome": "expected",
+      "attempts": [{ "retry": 0, "status": "failed", "durationMs": 150, "errors": [{ "message": "Expected failure" }], "attachments": [] }]
+    },
+    {
+      "id": "xpass-1", "projectId": "chromium", "file": "tests/example.spec.ts", "line": 5,
+      "titlePath": ["examples", "unexpected pass"], "repeatEachIndex": 0,
+      "expectedStatus": "failed", "outcome": "unexpected",
+      "attempts": [{ "retry": 0, "status": "passed", "durationMs": 100, "errors": [], "attachments": [] }]
+    },
+    {
+      "id": "skip-1", "projectId": "chromium", "file": "tests/example.spec.ts", "line": 6,
+      "titlePath": ["examples", "skips"], "repeatEachIndex": 0,
+      "expectedStatus": "skipped", "outcome": "skipped", "attempts": []
+    }
+  ],
+  "warnings": []
+}
