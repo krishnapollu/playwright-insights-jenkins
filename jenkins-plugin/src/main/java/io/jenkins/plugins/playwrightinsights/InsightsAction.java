@@ -81,7 +81,7 @@ public class InsightsAction implements RunAction2, Serializable {
         Map<String, ProjectSummary> summaries = new LinkedHashMap<>();
         for (Object value : manifest.projects()) {
             JSONObject project = (JSONObject) value;
-            summaries.put(project.getString("id"), new ProjectSummary(project.getString("name")));
+            summaries.put(project.getString("id"), new ProjectSummary(project.getString("id"), project.getString("name")));
         }
         for (Object value : manifest.tests()) {
             JSONObject test = (JSONObject) value;
@@ -261,10 +261,12 @@ public class InsightsAction implements RunAction2, Serializable {
     }
 
     public static class ProjectSummary {
+        private final String id;
         private final String name;
         private final Map<String, Integer> counts = new LinkedHashMap<>();
-        ProjectSummary(String name) { this.name = name; }
+        ProjectSummary(String id, String name) { this.id = id; this.name = name; }
         void add(String outcome) { counts.merge(outcome, 1, Integer::sum); }
+        public String getId() { return id; }
         public String getName() { return name; }
         public int getExpected() { return counts.getOrDefault("expected", 0); }
         public int getUnexpected() { return counts.getOrDefault("unexpected", 0); }

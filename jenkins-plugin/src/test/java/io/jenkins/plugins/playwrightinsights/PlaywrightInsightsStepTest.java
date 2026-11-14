@@ -26,7 +26,8 @@ import jenkins.model.Jenkins;
 @WithJenkins
 class PlaywrightInsightsStepTest {
     @Test void pipelineImportsAndShowsLogicalResults(JenkinsRule j) throws Exception {
-        String fixture = Files.readString(Path.of("..", "schema", "fixtures", "outcomes.json"));
+        String fixture = Files.readString(Path.of("..", "schema", "fixtures", "outcomes.json"))
+                .replace("\"name\": \"chromium\"", "\"name\": \"Chrome browser\"");
         String base64 = Base64.getEncoder().encodeToString(fixture.getBytes(StandardCharsets.UTF_8));
         WorkflowJob job = j.createProject(WorkflowJob.class, "playwright");
         job.setDefinition(new CpsFlowDefinition("node { writeFile file: 'manifest.json', text: '" + base64
@@ -41,12 +42,19 @@ class PlaywrightInsightsStepTest {
         assertEquals(2, action.getCounts().get("unexpected"));
         String page = j.createWebClient().goTo(run.getUrl() + "playwright-insights/").getWebResponse().getContentAsString();
         assertTrue(page.contains("Playwright Insights"));
+        assertTrue(page.contains("Understand this run at a glance"));
         assertTrue(page.contains("expected failure"));
+        assertTrue(page.contains("/plugin/playwright-insights/css/insights.css"));
+        String filtered = j.createWebClient().goTo(run.getUrl() + "playwright-insights/?project=chromium&outcome=unexpected")
+                .getWebResponse().getContentAsString();
+        assertTrue(filtered.contains("Chrome browser"));
+        assertTrue(filtered.contains("fails"));
+        assertFalse(filtered.contains("passes on retry"));
         var detailPage = j.createWebClient().goTo(run.getUrl() + "playwright-insights/?test=fail-1");
         String detail = detailPage.getWebResponse().getContentAsString();
         assertTrue(detail.contains("screenshot.png"));
         assertTrue(detail.contains("Assertion failed"));
-        var evidence = detailPage.getAnchors().stream().filter(anchor -> anchor.getTextContent().equals("screenshot")).findFirst().orElseThrow();
+        var evidence = detailPage.getAnchors().stream().filter(anchor -> anchor.getTextContent().contains("screenshot")).findFirst().orElseThrow();
         assertEquals("evidence", evidence.click().getWebResponse().getContentAsString());
         WorkflowRun second = j.buildAndAssertSuccess(job);
         assertEquals(0, second.getAction(InsightsAction.class).getComparisonCounts().get("unclassified"));

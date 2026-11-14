@@ -2,87 +2,95 @@
 <j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
   <l:layout title="Playwright Insights">
     <l:main-panel>
-      <h1>Playwright Insights — ${it.buildName}</h1>
-      <j:if test="${!it.complete}"><p><strong>Partial run:</strong> totals may be incomplete. This run is not used as a comparison baseline.</p></j:if>
-      <j:if test="${it.testCount == 0}"><p>No tests were recorded in this run.</p></j:if>
-      <p>Started: ${it.startedAt} · Duration: ${it.durationMs} ms · Logical tests: ${it.testCount}</p>
-      <p>Expected: ${it.counts.expected} · Unexpected: ${it.counts.unexpected} · Flaky: ${it.counts.flaky} · Skipped: ${it.counts.skipped}</p>
-      <j:if test="${it.previousComparableBuild != ''}"><p>Previous comparable build: ${it.previousComparableBuild}</p></j:if>
-      <j:if test="${it.previousComparableBuild != ''}"><p>New failures: ${it.comparisonCounts.newFailures} · Continuing failures: ${it.comparisonCounts.continuingFailures} · Recovered: ${it.comparisonCounts.recovered} · Newly observed: ${it.comparisonCounts.newlyObserved} · Unclassified: ${it.comparisonCounts.unclassified}</p></j:if>
-      <j:forEach var="warning" items="${it.warnings}"><p>Import warning: ${warning}</p></j:forEach>
+      <link rel="stylesheet" href="${resURL}/plugin/playwright-insights/css/insights.css"/>
+      <main class="pi">
+        <header class="pi-hero">
+          <div class="pi-hero__eyebrow">PLAYWRIGHT INSIGHTS <span aria-hidden="true">/</span> BUILD ${it.buildName}</div>
+          <h1>Understand this run at a glance.</h1>
+          <p>Test outcomes, retries, and evidence in one place.</p>
+          <div class="pi-hero__meta"><span>${it.testCount} logical tests</span><span>Duration ${it.durationMs} ms</span><span>Started ${it.startedAt}</span></div>
+        </header>
 
-      <h2>Projects</h2>
-      <table class="jenkins-table">
-        <thead><tr><th>Project</th><th>Expected</th><th>Unexpected</th><th>Flaky</th><th>Skipped</th></tr></thead>
-        <tbody>
-          <j:forEach var="project" items="${it.projectSummaries}">
-            <tr><td>${project.name}</td><td>${project.expected}</td><td>${project.unexpected}</td><td>${project.flaky}</td><td>${project.skipped}</td></tr>
-          </j:forEach>
-        </tbody>
-      </table>
+        <j:if test="${!it.complete}"><div class="pi-notice pi-notice--warning" role="status"><strong>Partial run.</strong> Totals may be incomplete; this run is excluded from comparisons.</div></j:if>
+        <j:if test="${it.testCount == 0}"><div class="pi-notice" role="status">No tests were recorded in this run.</div></j:if>
+        <j:forEach var="warning" items="${it.warnings}"><div class="pi-notice pi-notice--warning" role="status"><strong>Import warning:</strong> ${warning}</div></j:forEach>
 
-      <h2>Tests</h2>
-      <form method="get">
-        <div class="jenkins-form-item">
-          <label for="outcome">Outcome</label>
-          <select id="outcome" name="outcome">
-            <option value="">All</option>
-            <option value="unexpected">Unexpected</option>
-            <option value="flaky">Flaky</option>
-            <option value="expected">Expected</option>
-            <option value="skipped">Skipped</option>
-          </select>
-        </div>
-        <div class="jenkins-form-item">
-          <label for="project">Project</label>
-          <select id="project" name="project">
-            <option value="">All</option>
-            <j:forEach var="project" items="${it.projectSummaries}"><option value="${project.name}">${project.name}</option></j:forEach>
-          </select>
-        </div>
-        <div class="jenkins-form-item">
-          <label for="q">Title or file</label>
-          <input id="q" name="q" value="${it.query}"/>
-        </div>
-        <button class="jenkins-button" type="submit">Filter</button>
-      </form>
-      <table class="jenkins-table">
-        <thead><tr><th>Test</th><th>Project</th><th>Outcome</th><th>Duration</th></tr></thead>
-        <tbody>
-          <j:forEach var="test" items="${it.tests}">
-            <tr><td><a href="?test=${test.linkId}#test-detail">${test.title}</a></td><td>${test.projectId}</td><td>${test.outcome}</td><td>${test.durationMs} ms</td></tr>
-          </j:forEach>
-        </tbody>
-      </table>
-      <j:if test="${it.moreTests}"><a href="${it.nextPageUrl}">Next 100 tests</a></j:if>
+        <section class="pi-metrics" aria-label="Run outcomes">
+          <div class="pi-metric pi-metric--unexpected"><span class="pi-metric__label">Unexpected</span><strong>${it.counts.unexpected}</strong><span class="pi-metric__hint">Needs attention</span></div>
+          <div class="pi-metric pi-metric--flaky"><span class="pi-metric__label">Flaky</span><strong>${it.counts.flaky}</strong><span class="pi-metric__hint">Passed after retry</span></div>
+          <div class="pi-metric pi-metric--expected"><span class="pi-metric__label">Expected</span><strong>${it.counts.expected}</strong><span class="pi-metric__hint">Met expectations</span></div>
+          <div class="pi-metric pi-metric--skipped"><span class="pi-metric__label">Skipped</span><strong>${it.counts.skipped}</strong><span class="pi-metric__hint">Not executed</span></div>
+        </section>
 
-      <j:if test="${it.selectedTest != null}">
-        <h2 id="test-detail">Test detail: ${it.selectedTest.title}</h2>
-        <p>${it.selectedTest.file}:${it.selectedTest.line} · ${it.selectedTest.projectId} · Expected status: ${it.selectedTest.expectedStatus} · Outcome: ${it.selectedTest.outcome}</p>
-        <p>${it.classification}</p>
-        <h3>Recent comparable runs</h3>
-        <j:choose>
-          <j:when test="${it.history.size() == 0}"><p>No comparable history is available.</p></j:when>
-          <j:otherwise>
-            <ul><j:forEach var="entry" items="${it.history}"><li><a href="${rootURL}/${entry.url}">${entry.build}</a> — ${entry.outcome} (${entry.startedAt})</li></j:forEach></ul>
-          </j:otherwise>
-        </j:choose>
-        <j:if test="${it.selectedTest.attempts.size() == 0}"><p>No attempt data was recorded.</p></j:if>
-        <j:forEach var="attempt" items="${it.selectedTest.attempts}">
-          <h3>Attempt ${attempt.retry} — ${attempt.status} (${attempt.durationMs} ms)</h3>
-          <j:forEach var="error" items="${attempt.errors}">
-            <pre>${error.message}</pre>
-            <j:if test="${error.stack != null}"><pre>${error.stack}</pre></j:if>
-          </j:forEach>
-          <j:forEach var="attachment" items="${attempt.attachments}">
-            <j:set var="link" value="${it.artifactLink(attachment.path)}"/>
-            <j:choose>
-              <j:when test="${link != ''}"><a href="${rootURL}/${link}">${attachment.name}</a></j:when>
-              <j:otherwise><span>${attachment.name} (not archived)</span></j:otherwise>
-            </j:choose>
-          </j:forEach>
-        </j:forEach>
-      </j:if>
+        <j:if test="${it.previousComparableBuild != ''}">
+          <section class="pi-panel pi-comparison" aria-labelledby="pi-comparison-title">
+            <div class="pi-section-heading"><div><span class="pi-kicker">RUN OVER RUN</span><h2 id="pi-comparison-title">What changed?</h2></div><span class="pi-muted">Compared with ${it.previousComparableBuild}</span></div>
+            <div class="pi-comparison__grid">
+              <div><strong>${it.comparisonCounts.newFailures}</strong><span>New failures</span></div>
+              <div><strong>${it.comparisonCounts.continuingFailures}</strong><span>Continuing</span></div>
+              <div><strong>${it.comparisonCounts.recovered}</strong><span>Recovered</span></div>
+              <div><strong>${it.comparisonCounts.newlyObserved}</strong><span>Newly observed</span></div>
+              <div><strong>${it.comparisonCounts.unclassified}</strong><span>Unclassified</span></div>
+            </div>
+          </section>
+        </j:if>
+
+        <section class="pi-panel" aria-labelledby="pi-projects-title">
+          <div class="pi-section-heading"><div><span class="pi-kicker">COVERAGE</span><h2 id="pi-projects-title">Projects</h2></div><span class="pi-muted">Results by Playwright project</span></div>
+          <div class="pi-table-wrap" tabindex="0" role="region" aria-label="Project results">
+            <table class="jenkins-table pi-table"><thead><tr><th scope="col">Project</th><th scope="col">Expected</th><th scope="col">Unexpected</th><th scope="col">Flaky</th><th scope="col">Skipped</th></tr></thead>
+              <tbody><j:forEach var="project" items="${it.projectSummaries}"><tr><th scope="row">${project.name}</th><td>${project.expected}</td><td>${project.unexpected}</td><td>${project.flaky}</td><td>${project.skipped}</td></tr></j:forEach></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="pi-panel" aria-labelledby="pi-tests-title">
+          <div class="pi-section-heading"><div><span class="pi-kicker">INVESTIGATE</span><h2 id="pi-tests-title">Tests</h2></div><span class="pi-muted">Showing up to 100 per page</span></div>
+          <form class="pi-filters" method="get" aria-label="Filter tests">
+            <div><label for="outcome">Outcome</label><select class="jenkins-select" id="outcome" name="outcome">
+              <j:choose><j:when test="${it.outcomeFilter == ''}"><option value="" selected="selected">All outcomes</option></j:when><j:otherwise><option value="">All outcomes</option></j:otherwise></j:choose>
+              <j:choose><j:when test="${it.outcomeFilter == 'unexpected'}"><option value="unexpected" selected="selected">Unexpected</option></j:when><j:otherwise><option value="unexpected">Unexpected</option></j:otherwise></j:choose>
+              <j:choose><j:when test="${it.outcomeFilter == 'flaky'}"><option value="flaky" selected="selected">Flaky</option></j:when><j:otherwise><option value="flaky">Flaky</option></j:otherwise></j:choose>
+              <j:choose><j:when test="${it.outcomeFilter == 'expected'}"><option value="expected" selected="selected">Expected</option></j:when><j:otherwise><option value="expected">Expected</option></j:otherwise></j:choose>
+              <j:choose><j:when test="${it.outcomeFilter == 'skipped'}"><option value="skipped" selected="selected">Skipped</option></j:when><j:otherwise><option value="skipped">Skipped</option></j:otherwise></j:choose>
+            </select></div>
+            <div><label for="project">Project</label><select class="jenkins-select" id="project" name="project">
+              <j:choose><j:when test="${it.projectFilter == ''}"><option value="" selected="selected">All projects</option></j:when><j:otherwise><option value="">All projects</option></j:otherwise></j:choose>
+              <j:forEach var="project" items="${it.projectSummaries}"><j:choose><j:when test="${it.projectFilter == project.id}"><option value="${project.id}" selected="selected">${project.name}</option></j:when><j:otherwise><option value="${project.id}">${project.name}</option></j:otherwise></j:choose></j:forEach>
+            </select></div>
+            <div class="pi-filters__search"><label for="q">Search title or file</label><input class="jenkins-input" id="q" name="q" value="${it.query}" placeholder="Search tests"/></div>
+            <button class="jenkins-button jenkins-button--primary" type="submit">Apply filters</button>
+          </form>
+          <div class="pi-table-wrap" tabindex="0" role="region" aria-label="Test results">
+            <table class="jenkins-table pi-table pi-tests-table"><thead><tr><th scope="col">Test</th><th scope="col">Project</th><th scope="col">Outcome</th><th scope="col">Duration</th></tr></thead>
+              <tbody><j:forEach var="test" items="${it.tests}"><tr><th scope="row"><a href="?test=${test.linkId}#test-detail">${test.title}</a><small>${test.file}:${test.line}</small></th><td>${test.projectId}</td><td><span class="pi-status pi-status--${test.outcome}">${test.outcome}</span></td><td>${test.durationMs} ms</td></tr></j:forEach></tbody>
+            </table>
+          </div>
+          <j:if test="${it.testCount > 0 &amp;&amp; it.tests.size() == 0}"><p class="pi-empty">No tests match these filters.</p></j:if>
+          <j:if test="${it.moreTests}"><p class="pi-next"><a class="jenkins-button" href="${it.nextPageUrl}">Next 100 tests →</a></p></j:if>
+        </section>
+
+        <j:if test="${it.selectedTest != null}">
+          <section class="pi-panel pi-detail" id="test-detail" aria-labelledby="pi-detail-title">
+            <div class="pi-section-heading"><div><span class="pi-kicker">TEST DETAIL</span><h2 id="pi-detail-title">${it.selectedTest.title}</h2></div><span class="pi-status pi-status--${it.selectedTest.outcome}">${it.selectedTest.outcome}</span></div>
+            <p class="pi-detail__meta">${it.selectedTest.file}:${it.selectedTest.line} <span aria-hidden="true">·</span> ${it.selectedTest.projectId} <span aria-hidden="true">·</span> Expected ${it.selectedTest.expectedStatus}</p>
+            <p class="pi-classification">${it.classification}</p>
+            <div class="pi-detail__grid">
+              <div><h3>Recent comparable runs</h3>
+                <j:choose><j:when test="${it.history.size() == 0}"><p class="pi-muted">No comparable history is available.</p></j:when><j:otherwise><ol class="pi-history"><j:forEach var="entry" items="${it.history}"><li><a href="${rootURL}/${entry.url}">${entry.build}</a><span class="pi-status pi-status--${entry.outcome}">${entry.outcome}</span><small>${entry.startedAt}</small></li></j:forEach></ol></j:otherwise></j:choose>
+              </div>
+              <div><h3>Attempts &amp; evidence</h3>
+                <j:if test="${it.selectedTest.attempts.size() == 0}"><p class="pi-muted">No attempt data was recorded.</p></j:if>
+                <ol class="pi-attempts"><j:forEach var="attempt" items="${it.selectedTest.attempts}"><li class="pi-attempt">
+                  <div class="pi-attempt__head"><strong>Attempt ${attempt.retry + 1}</strong><span class="pi-status pi-status--${attempt.status}">${attempt.status}</span><span class="pi-muted">${attempt.durationMs} ms</span></div>
+                  <j:forEach var="error" items="${attempt.errors}"><pre class="pi-error">${error.message}</pre><j:if test="${error.stack != null}"><pre class="pi-stack">${error.stack}</pre></j:if></j:forEach>
+                  <j:forEach var="attachment" items="${attempt.attachments}"><j:set var="link" value="${it.artifactLink(attachment.path)}"/><j:choose><j:when test="${link != ''}"><a class="pi-evidence" href="${rootURL}/${link}">${attachment.name} ↗</a></j:when><j:otherwise><span class="pi-evidence pi-evidence--missing">${attachment.name} (not archived)</span></j:otherwise></j:choose></j:forEach>
+                </li></j:forEach></ol>
+              </div>
+            </div>
+          </section>
+        </j:if>
+      </main>
     </l:main-panel>
   </l:layout>
 </j:jelly>

@@ -2,20 +2,33 @@
 <j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
   <l:layout title="Playwright Trends">
     <l:main-panel>
-      <h1>Playwright Trends</h1>
-      <p>Last ten comparable complete runs retained by Jenkins.</p>
-      <j:choose>
-        <j:when test="${it.rows.size() == 0}"><p>No comparable runs are available. Configure a stable comparison key in the reporter.</p></j:when>
-        <j:otherwise>
-          <table class="jenkins-table">
-            <thead><tr><th>Build</th><th>Started</th><th>Expected</th><th>Unexpected</th><th>Flaky</th><th>Skipped</th></tr></thead>
-            <tbody><j:forEach var="row" items="${it.rows}"><tr>
-              <td><a href="${rootURL}/${row.url}playwright-insights/">${row.build}</a></td>
-              <td>${row.startedAt}</td><td>${row.expected}</td><td>${row.unexpected}</td><td>${row.flaky}</td><td>${row.skipped}</td>
-            </tr></j:forEach></tbody>
-          </table>
-        </j:otherwise>
-      </j:choose>
+      <link rel="stylesheet" href="${resURL}/plugin/playwright-insights/css/insights.css"/>
+      <main class="pi">
+        <header class="pi-hero">
+          <div class="pi-hero__eyebrow">PLAYWRIGHT INSIGHTS <span aria-hidden="true">/</span> JOB HISTORY</div>
+          <h1>See the pattern across runs.</h1>
+          <p>Recent results from comparable, complete builds.</p>
+        </header>
+        <section class="pi-panel" aria-labelledby="pi-trends-title">
+          <div class="pi-section-heading"><div><span class="pi-kicker">LAST TEN RUNS</span><h2 id="pi-trends-title">Playwright Trends</h2></div><span class="pi-muted">Subject to Jenkins build retention</span></div>
+          <j:choose>
+            <j:when test="${it.rows.size() == 0}"><p class="pi-empty">No comparable runs are available. Configure a stable comparison key in the reporter.</p></j:when>
+            <j:otherwise>
+              <div class="pi-legend" aria-label="Chart legend"><span class="pi-legend__expected">Expected</span><span class="pi-legend__unexpected">Unexpected</span><span class="pi-legend__flaky">Flaky</span><span class="pi-legend__skipped">Skipped</span></div>
+              <div class="pi-table-wrap" tabindex="0" role="region" aria-label="Recent build results">
+                <table class="jenkins-table pi-table pi-trends-table"><thead><tr><th scope="col">Build</th><th scope="col">Started</th><th scope="col">Outcome mix</th><th scope="col">Expected</th><th scope="col">Unexpected</th><th scope="col">Flaky</th><th scope="col">Skipped</th></tr></thead>
+                  <tbody><j:forEach var="row" items="${it.rows}"><tr>
+                    <th scope="row"><a href="${rootURL}/${row.url}playwright-insights/">${row.build}</a></th>
+                    <td>${row.startedAt}</td>
+                    <td><div class="pi-trend-bar" aria-hidden="true"><span class="pi-trend-bar__expected" style="flex-grow:${row.expected}"></span><span class="pi-trend-bar__unexpected" style="flex-grow:${row.unexpected}"></span><span class="pi-trend-bar__flaky" style="flex-grow:${row.flaky}"></span><span class="pi-trend-bar__skipped" style="flex-grow:${row.skipped}"></span></div></td>
+                    <td>${row.expected}</td><td>${row.unexpected}</td><td>${row.flaky}</td><td>${row.skipped}</td>
+                  </tr></j:forEach></tbody>
+                </table>
+              </div>
+            </j:otherwise>
+          </j:choose>
+        </section>
+      </main>
     </l:main-panel>
   </l:layout>
 </j:jelly>
