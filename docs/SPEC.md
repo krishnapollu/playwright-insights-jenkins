@@ -479,6 +479,7 @@ The MVP is **done** when all of the following are true:
 - [ ] Build result is not silently modified by importer.
 - [ ] Plugin UI passes authorization and XSS/path traversal tests.
 - [ ] All user-facing data views have meaningful empty states and keyboard-accessible controls.
+- [ ] Build summary, test detail, and trends pass a visual and usability review at desktop and mobile widths, including Jenkins light and dark themes.
 - [ ] Docs explain JUnit and HTML Publisher coexistence, sharding limitation, and Jenkins retention impact.
 - [ ] End-to-end demo works on a pinned Jenkins LTS + declared Playwright and Node versions.
 
@@ -491,6 +492,12 @@ The MVP is **done** when all of the following are true:
 ### Phase 1 — MVP / v0.1
 
 Ship reporter, manifest contract, import step, native build summary, details, evidence links, minimal previous-run comparison and last-ten histories. Provide sample repo and installation guide.
+
+**Milestone 1A — Correctness and security:** complete the MVP acceptance tests for import behavior, comparison, authorization, XSS, and artifact paths.
+
+**Milestone 1B — Next-generation UI:** redesign the build summary, test list, test detail, and trends around clear status cards, scannable failure rows, an attempt timeline, and compact history visuals using existing data. Keep the experience native to Jenkins, responsive, keyboard accessible, and compatible with its light and dark themes. Review the three primary user journeys on desktop and mobile; a developer should reach a failure and its evidence within three clicks.
+
+**Milestone 1C — Public alpha:** validate a real Pipeline demo, package the reporter and plugin, finish installation docs, and gather pilot feedback. The UI milestone is a release gate for this alpha.
 
 ### Phase 2 — Reliability / v0.2
 
