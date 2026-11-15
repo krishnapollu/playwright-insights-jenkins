@@ -67,4 +67,20 @@ class ManifestTest {
         root.put("tests", tests);
         assertEquals(5_000, parse(root.toString()).tests().size());
     }
+
+    @Test void separatesActualStatusFromExpectedOutcomeAndCountsRecordedAssertions() throws IOException {
+        JSONArray tests = JSONObject.fromObject(fixture("outcomes")).getJSONArray("tests");
+        InsightsAction.TestRow expectedFailure = new InsightsAction.TestRow(tests.getJSONObject(3));
+        InsightsAction.TestRow unexpectedPass = new InsightsAction.TestRow(tests.getJSONObject(4));
+        assertEquals("failed", expectedFailure.getStatus());
+        assertEquals("Expected failure", expectedFailure.getOutcomeNote());
+        assertEquals("passed", unexpectedPass.getStatus());
+        assertEquals("Unexpected pass", unexpectedPass.getOutcomeNote());
+        JSONObject attempt = tests.getJSONObject(1).getJSONArray("attempts").getJSONObject(0);
+        attempt.put("steps", JSONArray.fromObject(new Object[] {
+                JSONObject.fromObject("{\"title\":\"expect value\",\"category\":\"expect\",\"durationMs\":5,\"depth\":0,\"error\":\"mismatch\"}") }));
+        InsightsAction.TestRow failedTest = new InsightsAction.TestRow(tests.getJSONObject(1));
+        assertEquals(1, failedTest.getAssertionCount());
+        assertEquals(1, failedTest.getFailedAssertionCount());
+    }
 }

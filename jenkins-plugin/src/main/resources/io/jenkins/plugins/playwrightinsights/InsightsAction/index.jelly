@@ -8,17 +8,18 @@
           <div class="pi-brand"><span class="pi-brand__mark" aria-hidden="true"><i></i><i></i><i></i></span><span><strong>Playwright</strong><b>Insights</b></span></div>
           <span class="pi-brandbar__context">Build ${it.buildName} · Test results</span>
         </header>
+        <nav class="pi-navigation" aria-label="Playwright Insights navigation"><a href="${rootURL}/${it.dashboardUrl}">← Job dashboard</a><span>Build ${it.buildName}</span></nav>
 
         <section class="pi-command" aria-labelledby="pi-overview-title">
           <div class="pi-command__copy">
             <span class="pi-eyebrow">RUN OVERVIEW · ${it.complete ? 'COMPLETE' : 'PARTIAL'}</span>
             <h1 id="pi-overview-title">Build ${it.buildName} results</h1>
-            <p>${it.testCount} tests across ${it.projectSummaries.size()} projects. Review outcomes, recent changes, and supporting evidence.</p>
-            <div class="pi-command__meta"><span>Started ${it.startedAt}</span><span>Duration ${it.durationMs} ms</span></div>
+            <p>${it.testCount} tests across ${it.projectSummaries.size()} ${it.projectSummaries.size() == 1 ? 'project' : 'projects'}. Review statuses, recent changes, and supporting evidence.</p>
+            <div class="pi-command__meta"><span>Started ${it.startedAt}</span><span>Duration ${it.durationDisplay}</span><span>Assertions recorded: ${it.recordedAssertions}</span></div>
           </div>
-          <div class="pi-orbit" role="img" aria-label="${it.counts.expected} expected, ${it.counts.unexpected} unexpected, ${it.counts.flaky} flaky, ${it.counts.skipped} skipped">
-            <div class="pi-orbit__ring" style="${it.outcomeChartStyle}"><div class="pi-orbit__core"><strong>${it.testCount}</strong><span>TESTS</span></div></div>
-            <span class="pi-orbit__label">Outcome distribution</span>
+          <div class="pi-orbit" role="img" aria-label="${it.statusCounts.passed} passed, ${it.statusCounts.failed} failed, ${it.statusCounts.timedOut} timed out, ${it.statusCounts.skipped} skipped, ${it.statusCounts.interrupted} interrupted">
+            <div class="pi-orbit__ring" style="${it.statusChartStyle}"><div class="pi-orbit__core"><strong>${it.testCount}</strong><span>TESTS</span></div></div>
+            <span class="pi-orbit__label">Final test status</span>
           </div>
         </section>
 
@@ -26,11 +27,12 @@
         <j:if test="${it.testCount == 0}"><div class="pi-notice" role="status">No tests were recorded in this run.</div></j:if>
         <j:forEach var="warning" items="${it.warnings}"><div class="pi-notice" role="status"><strong>Import warning:</strong> ${warning}</div></j:forEach>
 
-        <section class="pi-outcomes" aria-label="Run outcomes">
-          <a class="pi-outcome pi-outcome--unexpected" href="?outcome=unexpected#explorer"><span class="pi-outcome__index">Unexpected</span><strong>${it.counts.unexpected}</strong><span>View tests <span aria-hidden="true">→</span></span></a>
-          <a class="pi-outcome pi-outcome--flaky" href="?outcome=flaky#explorer"><span class="pi-outcome__index">Flaky</span><strong>${it.counts.flaky}</strong><span>View tests <span aria-hidden="true">→</span></span></a>
-          <a class="pi-outcome pi-outcome--expected" href="?outcome=expected#explorer"><span class="pi-outcome__index">Expected</span><strong>${it.counts.expected}</strong><span>View tests <span aria-hidden="true">→</span></span></a>
-          <a class="pi-outcome pi-outcome--skipped" href="?outcome=skipped#explorer"><span class="pi-outcome__index">Skipped</span><strong>${it.counts.skipped}</strong><span>View tests <span aria-hidden="true">→</span></span></a>
+        <section class="pi-outcomes" aria-label="Final test statuses">
+          <a class="pi-outcome pi-outcome--expected" href="?status=passed#explorer"><span class="pi-outcome__index">Passed</span><strong>${it.statusCounts.passed}</strong><span>View tests <span aria-hidden="true">→</span></span></a>
+          <a class="pi-outcome pi-outcome--unexpected" href="?status=failed#explorer"><span class="pi-outcome__index">Failed</span><strong>${it.statusCounts.failed}</strong><span>View tests <span aria-hidden="true">→</span></span></a>
+          <a class="pi-outcome pi-outcome--timedOut" href="?status=timedOut#explorer"><span class="pi-outcome__index">Timed out</span><strong>${it.statusCounts.timedOut}</strong><span>View tests <span aria-hidden="true">→</span></span></a>
+          <a class="pi-outcome pi-outcome--skipped" href="?status=skipped#explorer"><span class="pi-outcome__index">Skipped</span><strong>${it.statusCounts.skipped}</strong><span>View tests <span aria-hidden="true">→</span></span></a>
+          <a class="pi-outcome pi-outcome--flaky" href="?status=interrupted#explorer"><span class="pi-outcome__index">Interrupted</span><strong>${it.statusCounts.interrupted}</strong><span>View tests <span aria-hidden="true">→</span></span></a>
         </section>
 
         <div class="pi-overview-grid">
@@ -38,12 +40,12 @@
             <div class="pi-section-head"><div><span class="pi-section-no">PROJECT BREAKDOWN</span><h2 id="pi-projects-title">Results by project</h2></div><span class="pi-section-note">Playwright projects</span></div>
             <j:forEach var="project" items="${it.projectSummaries}">
               <div class="pi-project">
-                <div class="pi-project__head"><strong>${project.name}</strong><span>${project.expected + project.unexpected + project.flaky + project.skipped} tests</span></div>
-                <div class="pi-stackbar" aria-hidden="true"><span class="pi-stackbar__expected" style="flex-grow:${project.expected}"></span><span class="pi-stackbar__unexpected" style="flex-grow:${project.unexpected}"></span><span class="pi-stackbar__flaky" style="flex-grow:${project.flaky}"></span><span class="pi-stackbar__skipped" style="flex-grow:${project.skipped}"></span></div>
-                <div class="pi-project__counts"><span>${project.expected} expected</span><span>${project.unexpected} unexpected</span><span>${project.flaky} flaky</span><span>${project.skipped} skipped</span></div>
+                <div class="pi-project__head"><strong>${project.name}</strong><span>${project.passed + project.failed + project.timedOut + project.skipped + project.interrupted} tests</span></div>
+                <div class="pi-stackbar" aria-hidden="true"><span class="pi-stackbar__expected" style="flex-grow:${project.passed}"></span><span class="pi-stackbar__unexpected" style="flex-grow:${project.failed}"></span><span class="pi-stackbar__timedOut" style="flex-grow:${project.timedOut}"></span><span class="pi-stackbar__skipped" style="flex-grow:${project.skipped}"></span><span class="pi-stackbar__flaky" style="flex-grow:${project.interrupted}"></span></div>
+                <div class="pi-project__counts"><span>${project.passed} passed</span><span>${project.failed} failed</span><span>${project.timedOut} timed out</span><span>${project.skipped} skipped</span><span>${project.interrupted} interrupted</span></div>
               </div>
             </j:forEach>
-            <div class="pi-key"><span class="pi-key--expected">Expected</span><span class="pi-key--unexpected">Unexpected</span><span class="pi-key--flaky">Flaky</span><span class="pi-key--skipped">Skipped</span></div>
+            <div class="pi-key"><span class="pi-key--expected">Passed</span><span class="pi-key--unexpected">Failed</span><span class="pi-key--timedOut">Timed out</span><span class="pi-key--skipped">Skipped</span><span class="pi-key--flaky">Interrupted</span></div>
           </section>
 
           <section class="pi-surface pi-compare" aria-labelledby="pi-compare-title">
@@ -51,8 +53,8 @@
             <j:choose><j:when test="${it.previousComparableBuild == ''}"><p class="pi-muted">No comparable complete build is available yet. Keep a stable comparison key to see changes here.</p></j:when>
               <j:otherwise>
                 <p class="pi-compare__baseline">Compared with <strong>${it.previousComparableBuild}</strong></p>
-                <div class="pi-compare__lead"><strong>+${it.comparisonCounts.newFailures}</strong><span>new failures</span></div>
-                <div class="pi-compare__rest"><span><strong>${it.comparisonCounts.continuingFailures}</strong> continuing</span><span><strong>${it.comparisonCounts.recovered}</strong> recovered</span><span><strong>${it.comparisonCounts.newlyObserved}</strong> newly observed</span><span><strong>${it.comparisonCounts.unclassified}</strong> unclassified</span></div>
+                <div class="pi-compare__lead"><strong>+${it.comparisonCounts.newFailures}</strong><span>new results needing review</span></div>
+                <div class="pi-compare__rest"><span><strong>${it.comparisonCounts.continuingFailures}</strong> continuing</span><span><strong>${it.comparisonCounts.recovered}</strong> resolved</span><span><strong>${it.comparisonCounts.newlyObserved}</strong> newly observed</span><span><strong>${it.comparisonCounts.unclassified}</strong> unclassified</span></div>
               </j:otherwise></j:choose>
           </section>
         </div>
@@ -60,12 +62,13 @@
         <section class="pi-workspace" id="explorer" aria-labelledby="pi-explorer-title">
           <div class="pi-section-head pi-workspace__heading"><div><span class="pi-section-no">TEST RESULTS</span><h2 id="pi-explorer-title">Tests in this run</h2></div><span class="pi-section-note">Select a result to inspect attempts and evidence</span></div>
           <form class="pi-filters" method="get" aria-label="Filter tests">
-            <div><label for="outcome">Outcome</label><select id="outcome" name="outcome">
-              <j:choose><j:when test="${it.outcomeFilter == ''}"><option value="" selected="selected">All outcomes</option></j:when><j:otherwise><option value="">All outcomes</option></j:otherwise></j:choose>
-              <j:choose><j:when test="${it.outcomeFilter == 'unexpected'}"><option value="unexpected" selected="selected">Unexpected</option></j:when><j:otherwise><option value="unexpected">Unexpected</option></j:otherwise></j:choose>
-              <j:choose><j:when test="${it.outcomeFilter == 'flaky'}"><option value="flaky" selected="selected">Flaky</option></j:when><j:otherwise><option value="flaky">Flaky</option></j:otherwise></j:choose>
-              <j:choose><j:when test="${it.outcomeFilter == 'expected'}"><option value="expected" selected="selected">Expected</option></j:when><j:otherwise><option value="expected">Expected</option></j:otherwise></j:choose>
-              <j:choose><j:when test="${it.outcomeFilter == 'skipped'}"><option value="skipped" selected="selected">Skipped</option></j:when><j:otherwise><option value="skipped">Skipped</option></j:otherwise></j:choose>
+            <div><label for="status">Status</label><select id="status" name="status">
+              <j:choose><j:when test="${it.statusFilter == ''}"><option value="" selected="selected">All statuses</option></j:when><j:otherwise><option value="">All statuses</option></j:otherwise></j:choose>
+              <j:choose><j:when test="${it.statusFilter == 'passed'}"><option value="passed" selected="selected">Passed</option></j:when><j:otherwise><option value="passed">Passed</option></j:otherwise></j:choose>
+              <j:choose><j:when test="${it.statusFilter == 'failed'}"><option value="failed" selected="selected">Failed</option></j:when><j:otherwise><option value="failed">Failed</option></j:otherwise></j:choose>
+              <j:choose><j:when test="${it.statusFilter == 'timedOut'}"><option value="timedOut" selected="selected">Timed out</option></j:when><j:otherwise><option value="timedOut">Timed out</option></j:otherwise></j:choose>
+              <j:choose><j:when test="${it.statusFilter == 'skipped'}"><option value="skipped" selected="selected">Skipped</option></j:when><j:otherwise><option value="skipped">Skipped</option></j:otherwise></j:choose>
+              <j:choose><j:when test="${it.statusFilter == 'interrupted'}"><option value="interrupted" selected="selected">Interrupted</option></j:when><j:otherwise><option value="interrupted">Interrupted</option></j:otherwise></j:choose>
             </select></div>
             <div><label for="project">Project</label><select id="project" name="project">
               <j:choose><j:when test="${it.projectFilter == ''}"><option value="" selected="selected">All projects</option></j:when><j:otherwise><option value="">All projects</option></j:otherwise></j:choose>
@@ -82,8 +85,8 @@
                 <j:set var="itemClass" value="pi-test-item"/>
                 <j:if test="${selected != null &amp;&amp; selected.id == test.id}"><j:set var="itemClass" value="pi-test-item is-selected"/></j:if>
                 <a class="${itemClass}" href="${it.testUrl(test)}">
-                  <span class="pi-test-item__top"><strong>${test.title}</strong><span class="pi-status pi-status--${test.outcome}">${test.outcome}</span></span>
-                  <span class="pi-test-item__bottom"><span>${test.projectId} · ${test.file}:${test.line}</span><span>${test.durationMs} ms</span></span>
+                  <span class="pi-test-item__top"><strong>${test.title}</strong><span class="pi-status pi-status--${test.status}">${test.statusLabel}</span></span>
+                  <span class="pi-test-item__bottom"><span>${test.projectId} · ${test.file}:${test.line}<j:if test="${test.outcomeNote != ''}"> · ${test.outcomeNote}</j:if></span><span>${test.durationDisplay}</span></span>
                 </a>
               </j:forEach>
               <j:if test="${it.testCount > 0 &amp;&amp; it.tests.size() == 0}"><p class="pi-empty">No tests match these filters.</p></j:if>
@@ -92,21 +95,22 @@
             <section class="pi-inspector" id="test-detail" aria-label="Selected test detail">
               <j:choose><j:when test="${selected == null}"><div class="pi-inspector__empty"><span aria-hidden="true">◎</span><h3>Choose a test to inspect</h3><p>Attempts, steps, output, and archived evidence appear here.</p></div></j:when>
                 <j:otherwise>
-                  <div class="pi-inspector__head"><span class="pi-section-no">TEST DETAIL · ${selected.projectId}</span><span class="pi-status pi-status--${selected.outcome}">${selected.outcome}</span></div>
+                  <div class="pi-inspector__head"><span class="pi-section-no">TEST DETAIL · ${selected.projectId}</span><span class="pi-status pi-status--${selected.status}">${selected.statusLabel}</span></div>
                   <h3 class="pi-inspector__title">${selected.title}</h3>
-                  <div class="pi-inspector__meta"><span>${selected.file}:${selected.line}</span><span>Expected ${selected.expectedStatus}</span><span>${selected.durationMs} ms total</span></div>
+                  <div class="pi-inspector__meta"><span>${selected.file}:${selected.line}</span><span>Expected status: ${selected.expectedStatus}</span><span>Duration: ${selected.durationDisplay}</span><span>Assertions recorded: ${selected.assertionCount}<j:if test="${selected.failedAssertionCount > 0}"> · ${selected.failedAssertionCount} failed</j:if></span></div>
+                  <j:if test="${selected.outcomeNote != ''}"><p class="pi-outcome-note">${selected.outcomeNote}</p></j:if>
                   <p class="pi-classification">${it.classification}</p>
                   <j:if test="${selected.tags.size() > 0}"><div class="pi-chips"><span class="pi-chips__label">TAGS</span><j:forEach var="tag" items="${selected.tags}"><span class="pi-chip">${tag}</span></j:forEach></div></j:if>
                   <j:if test="${selected.annotations.size() > 0}"><div class="pi-chips"><span class="pi-chips__label">ANNOTATIONS</span><j:forEach var="annotation" items="${selected.annotations}"><span class="pi-chip">${annotation.type}<j:if test="${annotation.description != null}"> · ${annotation.description}</j:if></span></j:forEach></div></j:if>
                   <div class="pi-inspector__divider"></div>
                   <div class="pi-inspector__section"><div class="pi-inspector__section-title"><h4>Recent outcomes</h4></div>
                     <j:choose><j:when test="${it.history.size() == 0}"><p class="pi-muted">No comparable history is available.</p></j:when>
-                      <j:otherwise><ol class="pi-history"><j:forEach var="entry" items="${it.history}"><li><j:choose><j:when test="${entry.outcome == 'Not observed'}"><a href="${rootURL}/${entry.url}playwright-insights/">${entry.build}</a></j:when><j:otherwise><a href="${rootURL}/${entry.url}playwright-insights/?test=${selected.linkId}#test-detail">${entry.build}</a></j:otherwise></j:choose><span class="pi-status pi-status--${entry.outcome}">${entry.outcome}</span><small>${entry.startedAt}</small></li></j:forEach></ol></j:otherwise></j:choose>
+                      <j:otherwise><ol class="pi-history"><j:forEach var="entry" items="${it.history}"><li><j:choose><j:when test="${entry.status == 'notObserved'}"><a href="${rootURL}/${entry.url}playwright-insights/">${entry.build}</a></j:when><j:otherwise><a href="${rootURL}/${entry.url}playwright-insights/?test=${selected.linkId}#test-detail">${entry.build}</a></j:otherwise></j:choose><span class="pi-status pi-status--${entry.status}">${entry.statusLabel}</span><j:if test="${entry.note != ''}"><small>${entry.note}</small></j:if><small>${entry.startedAt}</small></li></j:forEach></ol></j:otherwise></j:choose>
                   </div>
                   <div class="pi-inspector__section"><div class="pi-inspector__section-title"><h4>Attempts &amp; steps</h4></div>
                     <j:if test="${selected.attempts.size() == 0}"><p class="pi-muted">No attempt data was recorded.</p></j:if>
                     <ol class="pi-attempts"><j:forEach var="attempt" items="${selected.attempts}"><li class="pi-attempt">
-                      <div class="pi-attempt__head"><strong>Attempt ${attempt.retry + 1}</strong><span class="pi-status pi-status--${attempt.status}">${attempt.status}</span><span>${attempt.durationMs} ms</span><j:if test="${attempt.workerIndex >= 0}"><span>Worker ${attempt.workerIndex}</span></j:if></div>
+                      <div class="pi-attempt__head"><strong>Attempt ${attempt.retry + 1}</strong><span class="pi-status pi-status--${attempt.status}">${attempt.status}</span><span>${attempt.durationDisplay}</span><j:if test="${attempt.workerIndex >= 0}"><span>Worker ${attempt.workerIndex}</span></j:if></div>
                       <j:if test="${attempt.steps.size() > 0}"><ol class="pi-steps"><j:forEach var="step" items="${attempt.steps}"><li class="pi-step pi-step--depth-${step.depth}"><span class="pi-step__category">${step.category}</span><strong>${step.title}</strong><span>${step.durationMs} ms</span><j:if test="${step.error != null}"><small>${step.error}</small></j:if></li></j:forEach></ol></j:if>
                       <j:forEach var="error" items="${attempt.errors}"><pre class="pi-error">${error.message}</pre><j:if test="${error.stack != null}"><details class="pi-output"><summary>Stack trace</summary><pre>${error.stack}</pre></details></j:if></j:forEach>
                       <j:if test="${attempt.stdout != ''}"><details class="pi-output"><summary>Standard output</summary><pre>${attempt.stdout}</pre></details></j:if>

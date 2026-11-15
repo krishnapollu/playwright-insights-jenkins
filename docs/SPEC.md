@@ -146,16 +146,16 @@ These are **targets**, not claims of achieved performance or market demand.
 
 ### FR-03: Build summary
 
-- Display logical test outcomes: **expected**, **unexpected**, **flaky**, **skipped**.
-- Map Playwright outcomes accurately: `expected` (passed as expected), `unexpected` (did not meet expectation, including unexpected pass where applicable), `flaky` (retries led to expected outcome), `skipped`.
-- Show total tests, overall logical run status, wall-clock duration, project breakdown, and imported timestamp.
+- Display final Playwright test statuses: **passed**, **failed**, **timed out**, **skipped**, **interrupted**. Show a clear route from a build to its job dashboard.
+- Keep Playwright outcomes as separate comparison signals: `expected` (met the expected status, including an expected failure), `unexpected` (did not meet expectation, including an unexpected pass), `flaky` (retries led to an expected result), `skipped`.
+- Show total tests, final status distribution, wall-clock duration, recorded assertion steps, project breakdown, and imported timestamp.
 - Distinguish **attempt counts** from **logical test counts** to avoid double counting retries.
 - If results are incomplete or unsupported, show **partial/unknown** rather than fabricating a pass count.
 
 ### FR-04: Test drill-down
 
-- Paginated or server-side limited test list with filters for outcome, project, and free-text title/file.
-- Test detail displays title path, source file and line, project, expected status, final outcome, tags, annotations, ordered attempts, retry indices, worker index, steps, durations, bounded output, errors, stack, and evidence.
+- Paginated or server-side limited test list with filters for final status, project, and free-text title/file.
+- Test detail displays title path, source file and line, project, expected status, final status, outcome context, tags, annotations, ordered attempts, retry indices, worker index, steps, durations, recorded assertion counts, bounded output, errors, stack, and evidence.
 - Show evidence only when referenced attachments are actually archived and accessible.
 - If a test was not collected or no attempt data is available, show an explicit notice.
 

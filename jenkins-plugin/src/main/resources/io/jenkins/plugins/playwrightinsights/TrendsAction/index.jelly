@@ -18,23 +18,25 @@
             <section class="pi-summary" aria-label="Latest run summary">
               <div><span>Latest run</span><a href="${rootURL}/${latest.url}playwright-insights/"><strong>${latest.build}</strong></a><small>${latest.startedAt}</small></div>
               <div><span>Total tests</span><strong>${latest.total}</strong><small>Across all projects</small></div>
-              <div><span>Unexpected</span><strong>${latest.unexpected}</strong><small>${latest.unexpectedPercent}% of tests</small></div>
+              <div><span>Duration</span><strong>${latest.durationDisplay}</strong><small>Run elapsed time</small></div>
+              <div><span>Recorded assertions</span><strong>${latest.recordedAssertions}</strong><small>From Playwright expect steps</small></div>
+              <div><span>Needs review</span><strong>${latest.unexpected}</strong><small>${latest.unexpectedPercent}% did not meet expectation</small></div>
               <div><span>Flaky</span><strong>${latest.flaky}</strong><small>Passed after retry</small></div>
             </section>
             <section class="pi-surface pi-history-panel" aria-labelledby="pi-chart-title">
-              <div class="pi-section-head"><div><span class="pi-section-no">TREND</span><h2 id="pi-chart-title">Unexpected results by run</h2></div><span class="pi-section-note">Older → newer · last ${rows.size()} runs</span></div>
-              <div class="pi-history-chart" role="list" aria-label="Unexpected test percentage by build">
-                <j:forEach var="row" items="${rows}"><a role="listitem" href="${rootURL}/${row.url}playwright-insights/" aria-label="${row.build}: ${row.unexpectedPercent} percent unexpected"><span class="pi-history-chart__value">${row.unexpectedPercent}%</span><span class="pi-history-chart__rail"><span style="height:${row.unexpectedPercent}%"></span></span><strong>${row.build}</strong></a></j:forEach>
+              <div class="pi-section-head"><div><span class="pi-section-no">TREND</span><h2 id="pi-chart-title">Tests needing review by run</h2></div><span class="pi-section-note">Older → newer · last ${rows.size()} runs</span></div>
+              <div class="pi-history-chart" role="list" aria-label="Tests not meeting expected status by build">
+                <j:forEach var="row" items="${rows}"><a role="listitem" href="${rootURL}/${row.url}playwright-insights/" aria-label="${row.build}: ${row.unexpectedPercent} percent did not meet expected status"><span class="pi-history-chart__value">${row.unexpectedPercent}%</span><span class="pi-history-chart__rail"><span style="height:${row.unexpectedPercent}%"></span></span><strong>${row.build}</strong></a></j:forEach>
               </div>
-              <p class="pi-history-panel__note">Each bar is the share of logical tests with an unexpected outcome. Build retention limits this view.</p>
+              <p class="pi-history-panel__note">Share of tests whose final result did not match their expected status. Build retention limits this view.</p>
             </section>
             <section class="pi-surface pi-history-runs" aria-labelledby="pi-runs-title">
               <div class="pi-section-head"><div><span class="pi-section-no">RUNS</span><h2 id="pi-runs-title">Run results</h2></div><span class="pi-section-note">Select a build for detailed test results</span></div>
-              <div class="pi-key"><span class="pi-key--expected">Expected</span><span class="pi-key--unexpected">Unexpected</span><span class="pi-key--flaky">Flaky</span><span class="pi-key--skipped">Skipped</span></div>
+              <div class="pi-key"><span class="pi-key--expected">Passed</span><span class="pi-key--unexpected">Failed</span><span class="pi-key--timedOut">Timed out</span><span class="pi-key--skipped">Skipped</span><span class="pi-key--flaky">Interrupted</span></div>
               <div class="pi-run-list"><j:forEach var="row" items="${rows}"><a class="pi-run" href="${rootURL}/${row.url}playwright-insights/">
                 <div class="pi-run__identity"><strong>${row.build}</strong><small>${row.startedAt}</small></div>
-                <div class="pi-run__visual"><div class="pi-stackbar" aria-hidden="true"><span class="pi-stackbar__expected" style="flex-grow:${row.expected}"></span><span class="pi-stackbar__unexpected" style="flex-grow:${row.unexpected}"></span><span class="pi-stackbar__flaky" style="flex-grow:${row.flaky}"></span><span class="pi-stackbar__skipped" style="flex-grow:${row.skipped}"></span></div><small>${row.total} logical tests</small></div>
-                <div class="pi-run__counts"><span><strong>${row.expected}</strong> expected</span><span><strong>${row.unexpected}</strong> unexpected</span><span><strong>${row.flaky}</strong> flaky</span><span><strong>${row.skipped}</strong> skipped</span></div>
+                <div class="pi-run__visual"><div class="pi-stackbar" aria-hidden="true"><span class="pi-stackbar__expected" style="flex-grow:${row.passed}"></span><span class="pi-stackbar__unexpected" style="flex-grow:${row.failed}"></span><span class="pi-stackbar__timedOut" style="flex-grow:${row.timedOut}"></span><span class="pi-stackbar__skipped" style="flex-grow:${row.skipped}"></span><span class="pi-stackbar__flaky" style="flex-grow:${row.interrupted}"></span></div><small>${row.total} tests · ${row.durationDisplay}</small></div>
+                <div class="pi-run__counts"><span><strong>${row.passed}</strong> passed</span><span><strong>${row.failed}</strong> failed</span><span><strong>${row.timedOut}</strong> timed out</span><span><strong>${row.skipped}</strong> skipped</span><span><strong>${row.interrupted}</strong> interrupted</span></div>
                 <span class="pi-run__arrow" aria-hidden="true">→</span>
               </a></j:forEach></div>
             </section>

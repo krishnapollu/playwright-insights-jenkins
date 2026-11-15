@@ -54,9 +54,16 @@ public class InsightsAction implements RunAction2, Serializable {
     public int getTestCount() { return testCount; }
     public boolean isComplete() { return complete; }
     public String getBuildName() { return run.getDisplayName(); }
+    public String getDashboardUrl() { return run.getParent().getUrl() + "playwright-trends/"; }
     public String getStartedAt() { return manifest().run().getString("startedAt"); }
     public long getDurationMs() { return manifest().run().getLong("durationMs"); }
+    public String getDurationDisplay() { return formatDuration(getDurationMs()); }
     public JSONArray getWarnings() { return manifest().warnings(); }
+    static String formatDuration(long milliseconds) {
+        if (milliseconds < 1000) return milliseconds + " ms";
+        if (milliseconds < 60_000) return String.format(Locale.ROOT, "%.1f s", milliseconds / 1000.0);
+        return String.format(Locale.ROOT, "%d min %02d s", milliseconds / 60_000, milliseconds / 1000 % 60);
+    }
 
     Manifest manifest() {
         run.getParent().checkPermission(Item.READ);
@@ -77,16 +84,29 @@ public class InsightsAction implements RunAction2, Serializable {
         return counts;
     }
 
-    public String getOutcomeChartStyle() {
-        Map<String, Integer> counts = getCounts();
+    public Map<String, Integer> getStatusCounts() {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (String status : List.of("passed", "failed", "timedOut", "skipped", "interrupted")) counts.put(status, 0);
+        for (Object value : manifest().tests()) counts.merge(new TestRow((JSONObject) value).getStatus(), 1, Integer::sum);
+        return counts;
+    }
+
+    public int getRecordedAssertions() {
+        int count = 0;
+        for (Object value : manifest().tests()) count += new TestRow((JSONObject) value).getAssertionCount();
+        return count;
+    }
+
+    public String getStatusChartStyle() {
+        Map<String, Integer> counts = getStatusCounts();
         int total = counts.values().stream().mapToInt(Integer::intValue).sum();
         if (total == 0) return "background:#dce3ec";
-        String[] outcomes = {"expected", "unexpected", "flaky", "skipped"};
-        String[] colors = {"#32946a", "#bd4257", "#8063a7", "#8796a5"};
+        String[] statuses = {"passed", "failed", "timedOut", "skipped", "interrupted"};
+        String[] colors = {"#32946a", "#bd4257", "#c67a39", "#8796a5", "#8063a7"};
         StringBuilder chart = new StringBuilder("background:conic-gradient(");
         double start = 0;
-        for (int i = 0; i < outcomes.length; i++) {
-            double end = i == outcomes.length - 1 ? 100 : start + counts.get(outcomes[i]) * 100.0 / total;
+        for (int i = 0; i < statuses.length; i++) {
+            double end = i == statuses.length - 1 ? 100 : start + counts.get(statuses[i]) * 100.0 / total;
             if (i > 0) chart.append(',');
             chart.append(colors[i]).append(' ').append(String.format(Locale.ROOT, "%.2f%% %.2f%%", start, end));
             start = end;
@@ -103,7 +123,7 @@ public class InsightsAction implements RunAction2, Serializable {
         }
         for (Object value : manifest.tests()) {
             JSONObject test = (JSONObject) value;
-            summaries.get(test.getString("projectId")).add(test.getString("outcome"));
+            summaries.get(test.getString("projectId")).add(new TestRow(test).getStatus());
         }
         return new ArrayList<>(summaries.values());
     }
@@ -115,6 +135,7 @@ public class InsightsAction implements RunAction2, Serializable {
     }
 
     public String getOutcomeFilter() { return parameter("outcome"); }
+    public String getStatusFilter() { return parameter("status"); }
     public String getProjectFilter() { return parameter("project"); }
     public String getQuery() { return parameter("q"); }
     public int getPage() {
@@ -130,12 +151,14 @@ public class InsightsAction implements RunAction2, Serializable {
 
     private List<TestRow> filteredTests() {
         String outcome = getOutcomeFilter();
+        String status = getStatusFilter();
         String project = getProjectFilter();
         String query = getQuery().toLowerCase(java.util.Locale.ROOT);
         List<TestRow> matched = new ArrayList<>();
         for (Object value : manifest().tests()) {
             TestRow row = new TestRow((JSONObject) value);
             if (!outcome.isEmpty() && !outcome.equals(row.getOutcome())) continue;
+            if (!status.isEmpty() && !status.equals(row.getStatus())) continue;
             if (!project.isEmpty() && !project.equals(row.getProjectId())) continue;
             if (!query.isEmpty() && !(row.getTitle().toLowerCase(java.util.Locale.ROOT).contains(query)
                     || row.getFile().toLowerCase(java.util.Locale.ROOT).contains(query))) continue;
@@ -149,7 +172,7 @@ public class InsightsAction implements RunAction2, Serializable {
     }
 
     public String getNextPageUrl() {
-        return "?page=" + (getPage() + 1) + "&outcome=" + Util.rawEncode(getOutcomeFilter())
+        return "?page=" + (getPage() + 1) + "&status=" + Util.rawEncode(getStatusFilter()) + "&outcome=" + Util.rawEncode(getOutcomeFilter())
                 + "&project=" + Util.rawEncode(getProjectFilter()) + "&q=" + Util.rawEncode(getQuery());
     }
 
@@ -169,7 +192,7 @@ public class InsightsAction implements RunAction2, Serializable {
     }
 
     public String testUrl(TestRow test) {
-        return "?outcome=" + Util.rawEncode(getOutcomeFilter()) + "&project=" + Util.rawEncode(getProjectFilter())
+        return "?status=" + Util.rawEncode(getStatusFilter()) + "&outcome=" + Util.rawEncode(getOutcomeFilter()) + "&project=" + Util.rawEncode(getProjectFilter())
                 + "&q=" + Util.rawEncode(getQuery()) + "&page=" + getPage()
                 + "&test=" + test.getLinkId() + "#test-detail";
     }
@@ -238,12 +261,20 @@ public class InsightsAction implements RunAction2, Serializable {
             Manifest candidate;
             try { candidate = action.manifest(); } catch (RuntimeException ignored) { continue; }
             if (!comparable(current, candidate)) continue;
-            String outcome = "Not observed";
+            String status = "notObserved";
+            String statusLabel = "Not observed";
+            String note = "";
             for (Object value : candidate.tests()) {
                 JSONObject test = (JSONObject) value;
-                if (selected.getId().equals(test.getString("id"))) { outcome = test.getString("outcome"); break; }
+                if (selected.getId().equals(test.getString("id"))) {
+                    TestRow row = new TestRow(test);
+                    status = row.getStatus();
+                    statusLabel = row.getStatusLabel();
+                    note = row.getOutcomeNote();
+                    break;
+                }
             }
-            history.add(new HistoryRow(prior.getDisplayName(), prior.getUrl(), candidate.run().getString("startedAt"), outcome));
+            history.add(new HistoryRow(prior.getDisplayName(), prior.getUrl(), candidate.run().getString("startedAt"), status, statusLabel, note));
         }
         return history;
     }
@@ -268,8 +299,8 @@ public class InsightsAction implements RunAction2, Serializable {
         if (previous == null) return "Newly observed";
         String before = previous.getString("outcome");
         String now = selected.getOutcome();
-        if (now.equals("unexpected") && before.equals("unexpected")) return "Continuing failure";
-        if (now.equals("unexpected") && (before.equals("expected") || before.equals("flaky"))) return "New failure";
+        if (now.equals("unexpected") && before.equals("unexpected")) return "Continuing result needing review";
+        if (now.equals("unexpected") && (before.equals("expected") || before.equals("flaky"))) return "New result needing review";
         if ((now.equals("expected") || now.equals("flaky")) && before.equals("unexpected")) return now.equals("flaky") ? "Recovered, flaky in this run" : "Recovered";
         if (!now.equals(before) && (now.equals("skipped") || before.equals("skipped"))) return "Unclassified: skipped in one run";
         return "No failure change";
@@ -307,13 +338,14 @@ public class InsightsAction implements RunAction2, Serializable {
         private final String name;
         private final Map<String, Integer> counts = new LinkedHashMap<>();
         ProjectSummary(String id, String name) { this.id = id; this.name = name; }
-        void add(String outcome) { counts.merge(outcome, 1, Integer::sum); }
+        void add(String status) { counts.merge(status, 1, Integer::sum); }
         public String getId() { return id; }
         public String getName() { return name; }
-        public int getExpected() { return counts.getOrDefault("expected", 0); }
-        public int getUnexpected() { return counts.getOrDefault("unexpected", 0); }
-        public int getFlaky() { return counts.getOrDefault("flaky", 0); }
+        public int getPassed() { return counts.getOrDefault("passed", 0); }
+        public int getFailed() { return counts.getOrDefault("failed", 0); }
+        public int getTimedOut() { return counts.getOrDefault("timedOut", 0); }
         public int getSkipped() { return counts.getOrDefault("skipped", 0); }
+        public int getInterrupted() { return counts.getOrDefault("interrupted", 0); }
     }
 
     public static class TestRow {
@@ -331,6 +363,26 @@ public class InsightsAction implements RunAction2, Serializable {
         public String getProjectId() { return data.getString("projectId"); }
         public String getExpectedStatus() { return data.getString("expectedStatus"); }
         public String getOutcome() { return data.getString("outcome"); }
+        public String getStatus() {
+            JSONArray attempts = data.getJSONArray("attempts");
+            if (!attempts.isEmpty()) return attempts.getJSONObject(attempts.size() - 1).getString("status");
+            return getOutcome().equals("skipped") ? "skipped" : "interrupted";
+        }
+        public String getStatusLabel() {
+            return switch (getStatus()) {
+                case "timedOut" -> "Timed out";
+                case "passed" -> "Passed";
+                case "failed" -> "Failed";
+                case "skipped" -> "Skipped";
+                default -> "Interrupted";
+            };
+        }
+        public String getOutcomeNote() {
+            if (getOutcome().equals("flaky")) return "Flaky after retry";
+            if (getExpectedStatus().equals("failed") && getOutcome().equals("expected")) return "Expected failure";
+            if (getExpectedStatus().equals("failed") && getOutcome().equals("unexpected")) return "Unexpected pass";
+            return "";
+        }
         public JSONArray getTags() { return data.optJSONArray("tags") == null ? new JSONArray() : data.getJSONArray("tags"); }
         public JSONArray getAnnotations() { return data.optJSONArray("annotations") == null ? new JSONArray() : data.getJSONArray("annotations"); }
         public List<AttemptRow> getAttempts() {
@@ -343,6 +395,21 @@ public class InsightsAction implements RunAction2, Serializable {
             for (AttemptRow attempt : getAttempts()) duration += attempt.getDurationMs();
             return duration;
         }
+        public String getDurationDisplay() { return formatDuration(getDurationMs()); }
+        public int getAssertionCount() {
+            int count = 0;
+            for (AttemptRow attempt : getAttempts()) for (Object value : attempt.getSteps())
+                if (((JSONObject) value).getString("category").equals("expect")) count++;
+            return count;
+        }
+        public int getFailedAssertionCount() {
+            int count = 0;
+            for (AttemptRow attempt : getAttempts()) for (Object value : attempt.getSteps()) {
+                JSONObject step = (JSONObject) value;
+                if (step.getString("category").equals("expect") && step.containsKey("error")) count++;
+            }
+            return count;
+        }
     }
 
     public static class AttemptRow {
@@ -351,6 +418,7 @@ public class InsightsAction implements RunAction2, Serializable {
         public int getRetry() { return data.getInt("retry"); }
         public String getStatus() { return data.getString("status"); }
         public long getDurationMs() { return data.getLong("durationMs"); }
+        public String getDurationDisplay() { return formatDuration(getDurationMs()); }
         public int getWorkerIndex() { return data.containsKey("workerIndex") ? data.getInt("workerIndex") : -1; }
         public String getStdout() { return data.optString("stdout", ""); }
         public String getStderr() { return data.optString("stderr", ""); }
@@ -363,16 +431,22 @@ public class InsightsAction implements RunAction2, Serializable {
         private final String build;
         private final String url;
         private final String startedAt;
-        private final String outcome;
-        HistoryRow(String build, String url, String startedAt, String outcome) {
+        private final String status;
+        private final String statusLabel;
+        private final String note;
+        HistoryRow(String build, String url, String startedAt, String status, String statusLabel, String note) {
             this.build = build;
             this.url = url;
             this.startedAt = startedAt;
-            this.outcome = outcome;
+            this.status = status;
+            this.statusLabel = statusLabel;
+            this.note = note;
         }
         public String getBuild() { return build; }
         public String getUrl() { return url; }
         public String getStartedAt() { return startedAt; }
-        public String getOutcome() { return outcome; }
+        public String getStatus() { return status; }
+        public String getStatusLabel() { return statusLabel; }
+        public String getNote() { return note; }
     }
 }

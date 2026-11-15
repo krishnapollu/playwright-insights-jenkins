@@ -34,7 +34,8 @@ public class TrendsAction implements Action {
             if (!manifest.complete() || manifest.comparisonKey().isEmpty()) continue;
             if (baseline == null) { baseline = manifest; baselineAction = action; }
             if (!baselineAction.comparable(baseline, manifest)) continue;
-            rows.add(new TrendRow(run.getDisplayName(), run.getUrl(), manifest.run().getString("startedAt"), action.getCounts()));
+            rows.add(new TrendRow(run.getDisplayName(), run.getUrl(), manifest.run().getString("startedAt"),
+                    manifest.run().getLong("durationMs"), action.getRecordedAssertions(), action.getStatusCounts(), action.getCounts()));
         }
         return rows;
     }
@@ -43,21 +44,33 @@ public class TrendsAction implements Action {
         private final String build;
         private final String url;
         private final String startedAt;
-        private final java.util.Map<String, Integer> counts;
-        TrendRow(String build, String url, String startedAt, java.util.Map<String, Integer> counts) {
+        private final long durationMs;
+        private final int recordedAssertions;
+        private final java.util.Map<String, Integer> statuses;
+        private final java.util.Map<String, Integer> outcomes;
+        TrendRow(String build, String url, String startedAt, long durationMs, int recordedAssertions,
+                java.util.Map<String, Integer> statuses, java.util.Map<String, Integer> outcomes) {
             this.build = build;
             this.url = url;
             this.startedAt = startedAt;
-            this.counts = counts;
+            this.durationMs = durationMs;
+            this.recordedAssertions = recordedAssertions;
+            this.statuses = statuses;
+            this.outcomes = outcomes;
         }
         public String getBuild() { return build; }
         public String getUrl() { return url; }
         public String getStartedAt() { return startedAt; }
-        public int getExpected() { return counts.getOrDefault("expected", 0); }
-        public int getUnexpected() { return counts.getOrDefault("unexpected", 0); }
-        public int getFlaky() { return counts.getOrDefault("flaky", 0); }
-        public int getSkipped() { return counts.getOrDefault("skipped", 0); }
-        public int getTotal() { return getExpected() + getUnexpected() + getFlaky() + getSkipped(); }
+        public String getDurationDisplay() { return InsightsAction.formatDuration(durationMs); }
+        public int getRecordedAssertions() { return recordedAssertions; }
+        public int getPassed() { return statuses.getOrDefault("passed", 0); }
+        public int getFailed() { return statuses.getOrDefault("failed", 0); }
+        public int getTimedOut() { return statuses.getOrDefault("timedOut", 0); }
+        public int getSkipped() { return statuses.getOrDefault("skipped", 0); }
+        public int getInterrupted() { return statuses.getOrDefault("interrupted", 0); }
+        public int getUnexpected() { return outcomes.getOrDefault("unexpected", 0); }
+        public int getFlaky() { return outcomes.getOrDefault("flaky", 0); }
+        public int getTotal() { return getPassed() + getFailed() + getTimedOut() + getSkipped() + getInterrupted(); }
         public int getUnexpectedPercent() { return getTotal() == 0 ? 0 : Math.round(getUnexpected() * 100f / getTotal()); }
     }
 
