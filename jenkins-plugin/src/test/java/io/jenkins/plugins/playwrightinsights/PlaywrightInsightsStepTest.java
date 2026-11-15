@@ -43,7 +43,7 @@ class PlaywrightInsightsStepTest {
         assertEquals(2, action.getCounts().get("unexpected"));
         String page = j.createWebClient().goTo(run.getUrl() + "playwright-insights/").getWebResponse().getContentAsString();
         assertTrue(page.contains("Playwright Insights"));
-        assertTrue(page.contains("Every detail, in view"));
+        assertTrue(page.contains("RUN OVERVIEW"));
         assertTrue(page.contains("expected failure"));
         assertTrue(page.contains("pi-test-item is-selected"));
         assertTrue(page.contains("/plugin/playwright-insights/css/insights.css"));
@@ -69,7 +69,7 @@ class PlaywrightInsightsStepTest {
         String history = j.createWebClient().goTo(second.getUrl() + "playwright-insights/?test=fail-1").getWebResponse().getContentAsString();
         assertTrue(history.contains("Continuing failure"));
         String trends = j.createWebClient().goTo(job.getUrl() + "playwright-trends/").getWebResponse().getContentAsString();
-        assertTrue(trends.contains("Compare run composition"));
+        assertTrue(trends.contains("Run results"));
         assertEquals("Playwright Insights", job.getAction(TrendsAction.class).getDisplayName());
         assertTrue(trends.contains("#1"));
     }

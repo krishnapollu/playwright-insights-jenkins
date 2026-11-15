@@ -80,9 +80,9 @@ public class InsightsAction implements RunAction2, Serializable {
     public String getOutcomeChartStyle() {
         Map<String, Integer> counts = getCounts();
         int total = counts.values().stream().mapToInt(Integer::intValue).sum();
-        if (total == 0) return "background:#394455";
+        if (total == 0) return "background:#dce3ec";
         String[] outcomes = {"expected", "unexpected", "flaky", "skipped"};
-        String[] colors = {"#c6f36b", "#ff667e", "#9584ff", "#7e8c9f"};
+        String[] colors = {"#32946a", "#bd4257", "#8063a7", "#8796a5"};
         StringBuilder chart = new StringBuilder("background:conic-gradient(");
         double start = 0;
         for (int i = 0; i < outcomes.length; i++) {
