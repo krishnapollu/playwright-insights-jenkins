@@ -243,17 +243,17 @@ Jenkins workspace / agent
    └─ archiveArtifacts(...) for evidence
 ```
 
-### 8.1 Proposed repository
+### 8.1 Repository
 
 ```text
 playwright-insights/
+├── pom.xml                    # Jenkins plugin build and release metadata
+├── src/                       # Java sources, Jelly views, tests, CSS
 ├── reporter/                  # TypeScript Playwright custom reporter
-├── jenkins-plugin/            # Java, Maven, Jenkins plugin parent
 ├── schema/                    # JSON Schema, example manifests, compatibility policy
-├── fixtures/                  # Synthetic, redacted failure/rerun/sharding samples
-├── docs/                      # Quickstart, Pipeline examples, security, FAQ
-├── .github/workflows/         # CI for Node, Maven and contract tests
-├── SPEC.md
+├── docs/                      # Quickstart and product specification
+├── Jenkinsfile                # Jenkins plugin CI
+├── LICENSE
 └── README.md
 ```
 

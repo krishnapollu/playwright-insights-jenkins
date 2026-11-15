@@ -1,7 +1,15 @@
 {
   "name": "playwright-jenkins-insights",
   "version": "0.1.0",
-  "private": true,
+  "description": "Playwright reporter for Playwright Insights for Jenkins",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/krishnapollu/playwright-insights-jenkins.git",
+    "directory": "reporter"
+  },
+  "homepage": "https://github.com/krishnapollu/playwright-insights-jenkins#readme",
+  "keywords": ["playwright", "jenkins", "test-reporter"],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

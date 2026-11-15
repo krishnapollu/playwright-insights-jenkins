@@ -30,9 +30,9 @@ The comparison key must identify the same full suite across builds. Give filtere
 
 ## Jenkins
 
-Build the plugin from `jenkins-plugin/` with JDK 21 and Maven: `mvn verify`. The POM targets Jenkins 2.568.3. Install the generated `.hpi` in a compatible Jenkins controller with Pipeline support.
+Build the plugin from the repository root with JDK 21 and Maven: `mvn verify`. The POM targets Jenkins 2.568.3. Install the generated `target/playwright-insights.hpi` in a compatible Jenkins controller with Pipeline support.
 
-For a local UI preview, run `mvn hpi:run -Dport=8092` from `jenkins-plugin/`, then open `http://localhost:8092/jenkins/`. This starts a development Jenkins controller with the plugin loaded. Its local state lives in `jenkins-plugin/work/`; stop it with Ctrl+C. The preview avoids a permanent Jenkins installation.
+For a local UI preview, run `mvn hpi:run -Dport=8092` from the repository root, then open `http://localhost:8092/jenkins/`. This starts a development Jenkins controller with the plugin loaded. Its local state lives in `work/`; stop it with Ctrl+C. The preview avoids a permanent Jenkins installation.
 
 Run `bash scripts/phase0.sh` to execute the real six-test Playwright fixture and import its generated manifest into an ephemeral Jenkins Test Harness controller. The fixture intentionally produces a nonzero Playwright exit status.
 

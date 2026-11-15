@@ -26,7 +26,7 @@ import jenkins.model.Jenkins;
 @WithJenkins
 class PlaywrightInsightsStepTest {
     @Test void pipelineImportsAndShowsLogicalResults(JenkinsRule j) throws Exception {
-        String fixture = Files.readString(Path.of("..", "schema", "fixtures", "outcomes.json"))
+        String fixture = Files.readString(Path.of("schema", "fixtures", "outcomes.json"))
                 .replace("\"name\": \"chromium\"", "\"name\": \"Chrome browser\"");
         String base64 = Base64.getEncoder().encodeToString(fixture.getBytes(StandardCharsets.UTF_8));
         String png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=";
@@ -101,7 +101,7 @@ class PlaywrightInsightsStepTest {
     }
 
     @Test void untrustedTitlesAreEscaped(JenkinsRule j) throws Exception {
-        String fixture = Files.readString(Path.of("..", "schema", "fixtures", "outcomes.json"))
+        String fixture = Files.readString(Path.of("schema", "fixtures", "outcomes.json"))
                 .replace("\"passes\"", "\"<script>alert(1)</script>\"");
         String base64 = Base64.getEncoder().encodeToString(fixture.getBytes(StandardCharsets.UTF_8));
         WorkflowJob job = j.createProject(WorkflowJob.class, "untrusted");
@@ -114,7 +114,7 @@ class PlaywrightInsightsStepTest {
     }
 
     @Test void buildPageRequiresJobRead(JenkinsRule j) throws Exception {
-        String fixture = Files.readString(Path.of("..", "schema", "fixtures", "empty.json"));
+        String fixture = Files.readString(Path.of("schema", "fixtures", "empty.json"));
         String base64 = Base64.getEncoder().encodeToString(fixture.getBytes(StandardCharsets.UTF_8));
         WorkflowJob job = j.createProject(WorkflowJob.class, "private-results");
         job.setDefinition(new CpsFlowDefinition("node { writeFile file: 'manifest.json', text: '" + base64

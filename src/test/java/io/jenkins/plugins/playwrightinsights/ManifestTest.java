@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 class ManifestTest {
     private String fixture(String name) throws IOException {
-        return Files.readString(Path.of("..", "schema", "fixtures", name + ".json"));
+        return Files.readString(Path.of("schema", "fixtures", name + ".json"));
     }
 
     private Manifest parse(String value) throws IOException {

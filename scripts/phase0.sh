@@ -18,5 +18,5 @@ if PLAYWRIGHT_INSIGHTS_OUTPUT_FILE="$tmp_dir/manifest.json" ./node_modules/.bin/
 fi
 
 test -s "$tmp_dir/manifest.json"
-cd "$repo_root/jenkins-plugin"
+cd "$repo_root"
 mvn -Dplaywright.insights.realManifest="$tmp_dir/manifest.json" verify
