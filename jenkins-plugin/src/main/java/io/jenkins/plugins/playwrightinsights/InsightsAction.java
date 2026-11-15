@@ -13,6 +13,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import net.sf.json.JSONArray;
@@ -76,6 +77,23 @@ public class InsightsAction implements RunAction2, Serializable {
         return counts;
     }
 
+    public String getOutcomeChartStyle() {
+        Map<String, Integer> counts = getCounts();
+        int total = counts.values().stream().mapToInt(Integer::intValue).sum();
+        if (total == 0) return "background:#394455";
+        String[] outcomes = {"expected", "unexpected", "flaky", "skipped"};
+        String[] colors = {"#c6f36b", "#ff667e", "#9584ff", "#7e8c9f"};
+        StringBuilder chart = new StringBuilder("background:conic-gradient(");
+        double start = 0;
+        for (int i = 0; i < outcomes.length; i++) {
+            double end = i == outcomes.length - 1 ? 100 : start + counts.get(outcomes[i]) * 100.0 / total;
+            if (i > 0) chart.append(',');
+            chart.append(colors[i]).append(' ').append(String.format(Locale.ROOT, "%.2f%% %.2f%%", start, end));
+            start = end;
+        }
+        return chart.append(')').toString();
+    }
+
     public List<ProjectSummary> getProjectSummaries() {
         Manifest manifest = manifest();
         Map<String, ProjectSummary> summaries = new LinkedHashMap<>();
@@ -137,12 +155,23 @@ public class InsightsAction implements RunAction2, Serializable {
 
     public TestRow getSelectedTest() {
         String id = parameter("test");
-        if (id.isEmpty() || id.length() > 128) return null;
-        for (Object value : manifest().tests()) {
-            JSONObject test = (JSONObject) value;
-            if (id.equals(test.getString("id"))) return new TestRow(test);
+        if (!id.isEmpty()) {
+            if (id.length() > 128) return null;
+            for (Object value : manifest().tests()) {
+                JSONObject test = (JSONObject) value;
+                if (id.equals(test.getString("id"))) return new TestRow(test);
+            }
+            return null;
         }
-        return null;
+        List<TestRow> visible = getTests();
+        for (TestRow test : visible) if (test.getOutcome().equals("unexpected")) return test;
+        return visible.isEmpty() ? null : visible.get(0);
+    }
+
+    public String testUrl(TestRow test) {
+        return "?outcome=" + Util.rawEncode(getOutcomeFilter()) + "&project=" + Util.rawEncode(getProjectFilter())
+                + "&q=" + Util.rawEncode(getQuery()) + "&page=" + getPage()
+                + "&test=" + test.getLinkId() + "#test-detail";
     }
 
     public String getPreviousComparableBuild() {
@@ -260,6 +289,19 @@ public class InsightsAction implements RunAction2, Serializable {
         return run.getUrl() + "artifact/" + String.join("/", java.util.Arrays.stream(path.split("/")).map(Util::rawEncode).toList());
     }
 
+    public String mediaKind(JSONObject attachment) {
+        String path = attachment.getString("path").toLowerCase(Locale.ROOT);
+        String type = attachment.getString("contentType").toLowerCase(Locale.ROOT);
+        if ((type.equals("image/png") && path.endsWith(".png"))
+                || (type.equals("image/jpeg") && (path.endsWith(".jpg") || path.endsWith(".jpeg")))
+                || (type.equals("image/webp") && path.endsWith(".webp"))) return "image";
+        if ((type.equals("video/webm") && path.endsWith(".webm"))
+                || (type.equals("video/mp4") && path.endsWith(".mp4"))) return "video";
+        if (type.equals("application/zip") && path.endsWith(".zip")
+                && attachment.getString("name").toLowerCase(Locale.ROOT).contains("trace")) return "trace";
+        return "file";
+    }
+
     public static class ProjectSummary {
         private final String id;
         private final String name;
@@ -289,12 +331,32 @@ public class InsightsAction implements RunAction2, Serializable {
         public String getProjectId() { return data.getString("projectId"); }
         public String getExpectedStatus() { return data.getString("expectedStatus"); }
         public String getOutcome() { return data.getString("outcome"); }
-        public JSONArray getAttempts() { return data.getJSONArray("attempts"); }
+        public JSONArray getTags() { return data.optJSONArray("tags") == null ? new JSONArray() : data.getJSONArray("tags"); }
+        public JSONArray getAnnotations() { return data.optJSONArray("annotations") == null ? new JSONArray() : data.getJSONArray("annotations"); }
+        public List<AttemptRow> getAttempts() {
+            List<AttemptRow> attempts = new ArrayList<>();
+            for (Object value : data.getJSONArray("attempts")) attempts.add(new AttemptRow((JSONObject) value));
+            return attempts;
+        }
         public long getDurationMs() {
             long duration = 0;
-            for (Object value : getAttempts()) duration += ((JSONObject) value).getLong("durationMs");
+            for (AttemptRow attempt : getAttempts()) duration += attempt.getDurationMs();
             return duration;
         }
+    }
+
+    public static class AttemptRow {
+        private final JSONObject data;
+        AttemptRow(JSONObject data) { this.data = data; }
+        public int getRetry() { return data.getInt("retry"); }
+        public String getStatus() { return data.getString("status"); }
+        public long getDurationMs() { return data.getLong("durationMs"); }
+        public int getWorkerIndex() { return data.containsKey("workerIndex") ? data.getInt("workerIndex") : -1; }
+        public String getStdout() { return data.optString("stdout", ""); }
+        public String getStderr() { return data.optString("stderr", ""); }
+        public JSONArray getSteps() { return data.optJSONArray("steps") == null ? new JSONArray() : data.getJSONArray("steps"); }
+        public JSONArray getErrors() { return data.getJSONArray("errors"); }
+        public JSONArray getAttachments() { return data.getJSONArray("attachments"); }
     }
 
     public static class HistoryRow {

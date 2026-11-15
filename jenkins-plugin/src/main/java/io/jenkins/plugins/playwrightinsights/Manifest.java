@@ -38,7 +38,7 @@ final class Manifest {
 
     private static void validate(JSONObject root) {
         fields(root, "schemaVersion producer run projects tests warnings", "");
-        if (!"1.0.0".equals(string(root, "schemaVersion", 1, 16))) fail("unsupported schema version");
+        if (!List.of("1.0.0", "1.1.0").contains(string(root, "schemaVersion", 1, 16))) fail("unsupported schema version");
         JSONObject producer = object(root, "producer");
         fields(producer, "name version", "");
         string(producer, "name", 1, 128);
@@ -73,7 +73,7 @@ final class Manifest {
         Set<String> testIds = new HashSet<>();
         for (Object value : tests) {
             JSONObject test = asObject(value, "test");
-            fields(test, "id projectId file line titlePath repeatEachIndex expectedStatus outcome attempts", "");
+            fields(test, "id projectId file line titlePath repeatEachIndex expectedStatus outcome attempts", "tags annotations");
             String id = string(test, "id", 1, 128);
             if (!testIds.add(id)) fail("duplicate test id");
             if (!projectIds.contains(string(test, "projectId", 1, 128))) fail("unknown project id");
@@ -85,13 +85,31 @@ final class Manifest {
             integer(test, "repeatEachIndex", 0, Long.MAX_VALUE);
             choice(test, "expectedStatus", "passed", "failed", "timedOut", "skipped", "interrupted");
             choice(test, "outcome", "expected", "unexpected", "flaky", "skipped");
+            if (test.containsKey("tags")) for (Object tag : array(test, "tags", 16)) boundedString(tag, 1, 128, "tag");
+            if (test.containsKey("annotations")) for (Object annotationValue : array(test, "annotations", 16)) {
+                JSONObject annotation = asObject(annotationValue, "annotation");
+                fields(annotation, "type", "description");
+                string(annotation, "type", 1, 128);
+                if (annotation.containsKey("description")) string(annotation, "description", 0, 512);
+            }
             JSONArray attempts = array(test, "attempts", 16);
             for (int i = 0; i < attempts.size(); i++) {
                 JSONObject attempt = asObject(attempts.get(i), "attempt");
-                fields(attempt, "retry status durationMs errors attachments", "");
+                fields(attempt, "retry status durationMs errors attachments", "workerIndex stdout stderr steps");
                 if (integer(attempt, "retry", 0, 15) != i) fail("nonsequential retry");
                 choice(attempt, "status", "passed", "failed", "timedOut", "skipped", "interrupted");
                 integer(attempt, "durationMs", 0, Long.MAX_VALUE);
+                if (attempt.containsKey("workerIndex")) integer(attempt, "workerIndex", -1, Integer.MAX_VALUE);
+                for (String output : List.of("stdout", "stderr")) if (attempt.containsKey(output)) string(attempt, output, 0, 4096);
+                if (attempt.containsKey("steps")) for (Object stepValue : array(attempt, "steps", 128)) {
+                    JSONObject step = asObject(stepValue, "step");
+                    fields(step, "title category durationMs depth", "error");
+                    string(step, "title", 1, 256);
+                    string(step, "category", 1, 64);
+                    integer(step, "durationMs", 0, Long.MAX_VALUE);
+                    integer(step, "depth", 0, 4);
+                    if (step.containsKey("error")) string(step, "error", 0, 1024);
+                }
                 for (Object errorValue : array(attempt, "errors", 8)) {
                     JSONObject error = asObject(errorValue, "error");
                     fields(error, "message", "stack");

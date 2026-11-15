@@ -78,7 +78,7 @@ These are **targets**, not claims of achieved performance or market demand.
 - Rerunning individual tests through the UI.
 - AI diagnosis, automatic healing, PR review, Git integration beyond metadata already available.
 - Organization-wide dashboards across independent Jenkins jobs.
-- Browser-based trace viewing embedded inside Jenkins (link/download only for MVP).
+- Browser-based Trace Viewer embedded inside Jenkins (download plus inline step details for MVP).
 - Cross-CI support, distributed storage systems, or live streaming run telemetry.
 
 ## 4. Releases and priority
@@ -131,7 +131,7 @@ These are **targets**, not claims of achieved performance or market demand.
 
 - TypeScript reporter supports Playwright Test's documented custom reporter interface.
 - Produces **one manifest per logical Playwright execution** at reporter end, using an atomic temporary-file write/rename where supported.
-- Records Playwright test project, file, title path, status, attempts/retries, duration, errors, and evidence references.
+- Records Playwright test project, file, title path, tags, annotations, status, attempts/retries, worker index, bounded steps and output, duration, errors, and evidence references.
 - Redacts or truncates oversized content and never copies arbitrary attachment contents into the JSON.
 - Supports configuration via reporter options or environment variables for output directory and optional metadata.
 - Treats missing/malformed attachment paths as warnings, never as opportunities to access arbitrary files.
@@ -155,7 +155,7 @@ These are **targets**, not claims of achieved performance or market demand.
 ### FR-04: Test drill-down
 
 - Paginated or server-side limited test list with filters for outcome, project, and free-text title/file.
-- Test detail displays title path, source file and line, project, expected status, final outcome, ordered attempts, retry indices, durations, errors (bounded output), stack, and attachment links.
+- Test detail displays title path, source file and line, project, expected status, final outcome, tags, annotations, ordered attempts, retry indices, worker index, steps, durations, bounded output, errors, stack, and evidence.
 - Show evidence only when referenced attachments are actually archived and accessible.
 - If a test was not collected or no attempt data is available, show an explicit notice.
 
@@ -171,7 +171,7 @@ These are **targets**, not claims of achieved performance or market demand.
 
 - Reporter serializes **relative attachment paths and metadata only**; Jenkins plugin never treats raw paths as trusted downloadable URLs.
 - Documentation provides `archiveArtifacts` example for `trace.zip`, screenshots, and videos.
-- Render evidence links only after canonicalization and validation against the build's archived artifact inventory, including path traversal and symlink protections.
+- Render inline images and video only for validated archived artifacts with matching safe media types and extensions. Keep other files as downloads. Validate paths against the build's archived artifact inventory, including path traversal and symlink protections.
 - Respect Jenkins permission checks; do not create anonymous bypass routes.
 
 ### FR-07: Observability
@@ -205,14 +205,14 @@ Customs / submit          Firefox   Flaky        17.1s
 ### 7.2 Test detail
 
 - Context: project/browser, file:line, title path, expected status, classification.
-- Attempt timeline: initial attempt + retries, each with status, duration, error/stack and attachment links.
+- Attempt timeline: initial attempt + retries, each with status, duration, worker, steps, output, error/stack, and inline media when available.
 - History strip: last ten *comparable* runs with date/build link and explicit missing/unknown markers.
 - Comparison: prior outcome, duration difference if meaningful, and prior evidence links where retained.
 
-### 7.3 Job > Playwright Trends
+### 7.3 Job > Playwright Insights
 
-- v0.1: simple table of last ten comparable runs, totals, link to each build; test history accessible via a selected build.
-- v0.2: pass/flake trends, persistent failures, slow tests, groupings and charts.
+- v0.1: chart and ledger of the last ten comparable runs, totals, links to each build; test history accessible via a selected build.
+- v0.2: pass/flake trends, persistent failures, slow tests, groupings, and richer comparative charts.
 
 ### 7.4 Accessibility
 
@@ -473,7 +473,7 @@ The MVP is **done** when all of the following are true:
 - [ ] Manifest validates against published JSON Schema v1 and rejects malformed or oversized input.
 - [ ] Jenkins Pipeline can import it via `playwrightInsights` and show a build-level action.
 - [ ] Logical totals, project breakdown, retry attempts, and per-test details match Playwright source fixtures.
-- [ ] A failing test can expose archived screenshot/trace/video links safely when available.
+- [ ] A failing test can show archived screenshots and video inline and provide a trace download safely when available.
 - [ ] Historical comparison correctly handles new, continuing, recovered and unclassified test cases.
 - [ ] Missing/partial input does not appear as a successful zero-failure run.
 - [ ] Build result is not silently modified by importer.
@@ -495,7 +495,7 @@ Ship reporter, manifest contract, import step, native build summary, details, ev
 
 **Milestone 1A — Correctness and security:** complete the MVP acceptance tests for import behavior, comparison, authorization, XSS, and artifact paths.
 
-**Milestone 1B — Next-generation UI:** redesign the build summary, test list, test detail, and trends around clear status cards, scannable failure rows, an attempt timeline, and compact history visuals using existing data. Keep the experience native to Jenkins, responsive, keyboard accessible, and compatible with its light and dark themes. Review the three primary user journeys on desktop and mobile; a developer should reach a failure and its evidence within three clicks.
+**Milestone 1B — Next-generation UI:** give Playwright Insights a distinct visual identity; redesign the build summary, test explorer, details, and job history around outcome and history charts, scannable results, an attempt and step timeline, and inline screenshots and video. Keep the experience inside Jenkins, responsive and keyboard accessible. Review the three primary user journeys on desktop and mobile; a developer should reach a failure and its evidence within three clicks. Full Trace Viewer embedding remains deferred until it can work with authenticated Jenkins artifacts and content security policy.
 
 **Milestone 1C — Public alpha:** validate a real Pipeline demo, package the reporter and plugin, finish installation docs, and gather pilot feedback. The UI milestone is a release gate for this alpha.
 

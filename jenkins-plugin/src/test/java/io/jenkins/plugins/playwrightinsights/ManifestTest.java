@@ -39,6 +39,21 @@ class ManifestTest {
         assertThrows(IOException.class, () -> Manifest.parse(new byte[Manifest.MAX_BYTES + 1]));
     }
 
+    @Test void acceptsRichDetailsAndBoundsThem() throws IOException {
+        JSONObject root = JSONObject.fromObject(fixture("outcomes"));
+        root.put("schemaVersion", "1.1.0");
+        JSONObject test = root.getJSONArray("tests").getJSONObject(0);
+        test.put("tags", JSONArray.fromObject(new String[] {"@smoke"}));
+        test.put("annotations", JSONArray.fromObject(new Object[] {JSONObject.fromObject("{\"type\":\"owner\",\"description\":\"QA\"}")}));
+        JSONObject attempt = test.getJSONArray("attempts").getJSONObject(0);
+        attempt.put("workerIndex", 0);
+        attempt.put("stdout", "diagnostic");
+        attempt.put("steps", JSONArray.fromObject(new Object[] {JSONObject.fromObject("{\"title\":\"open page\",\"category\":\"test.step\",\"durationMs\":12,\"depth\":0}")}));
+        assertEquals(6, parse(root.toString()).tests().size());
+        attempt.put("stdout", "x".repeat(4097));
+        assertThrows(IOException.class, () -> parse(root.toString()));
+    }
+
     @Test void acceptsFiveThousandLogicalTests() throws IOException {
         JSONObject root = JSONObject.fromObject(fixture("outcomes"));
         JSONObject template = root.getJSONArray("tests").getJSONObject(0);

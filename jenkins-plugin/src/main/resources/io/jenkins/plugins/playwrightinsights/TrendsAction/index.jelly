@@ -1,33 +1,38 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
-  <l:layout title="Playwright Trends">
+  <l:layout title="Playwright Insights">
     <l:main-panel>
       <link rel="stylesheet" href="${resURL}/plugin/playwright-insights/css/insights.css"/>
       <main class="pi">
-        <header class="pi-hero">
-          <div class="pi-hero__eyebrow">PLAYWRIGHT INSIGHTS <span aria-hidden="true">/</span> JOB HISTORY</div>
-          <h1>See the pattern across runs.</h1>
-          <p>Recent results from comparable, complete builds.</p>
+        <header class="pi-brandbar">
+          <div class="pi-brand"><span class="pi-brand__mark" aria-hidden="true"><i></i><i></i><i></i></span><span><strong>Playwright</strong><b>Insights</b></span></div>
+          <span class="pi-brandbar__context">JOB HISTORY <span aria-hidden="true">/</span> TEST INTELLIGENCE</span>
         </header>
-        <section class="pi-panel" aria-labelledby="pi-trends-title">
-          <div class="pi-section-heading"><div><span class="pi-kicker">LAST TEN RUNS</span><h2 id="pi-trends-title">Playwright Trends</h2></div><span class="pi-muted">Subject to Jenkins build retention</span></div>
-          <j:choose>
-            <j:when test="${it.rows.size() == 0}"><p class="pi-empty">No comparable runs are available. Configure a stable comparison key in the reporter.</p></j:when>
-            <j:otherwise>
-              <div class="pi-legend" aria-label="Chart legend"><span class="pi-legend__expected">Expected</span><span class="pi-legend__unexpected">Unexpected</span><span class="pi-legend__flaky">Flaky</span><span class="pi-legend__skipped">Skipped</span></div>
-              <div class="pi-table-wrap" tabindex="0" role="region" aria-label="Recent build results">
-                <table class="jenkins-table pi-table pi-trends-table"><thead><tr><th scope="col">Build</th><th scope="col">Started</th><th scope="col">Outcome mix</th><th scope="col">Expected</th><th scope="col">Unexpected</th><th scope="col">Flaky</th><th scope="col">Skipped</th></tr></thead>
-                  <tbody><j:forEach var="row" items="${it.rows}"><tr>
-                    <th scope="row"><a href="${rootURL}/${row.url}playwright-insights/">${row.build}</a></th>
-                    <td>${row.startedAt}</td>
-                    <td><div class="pi-trend-bar" aria-hidden="true"><span class="pi-trend-bar__expected" style="flex-grow:${row.expected}"></span><span class="pi-trend-bar__unexpected" style="flex-grow:${row.unexpected}"></span><span class="pi-trend-bar__flaky" style="flex-grow:${row.flaky}"></span><span class="pi-trend-bar__skipped" style="flex-grow:${row.skipped}"></span></div></td>
-                    <td>${row.expected}</td><td>${row.unexpected}</td><td>${row.flaky}</td><td>${row.skipped}</td>
-                  </tr></j:forEach></tbody>
-                </table>
-              </div>
-            </j:otherwise>
-          </j:choose>
+        <section class="pi-command pi-command--history" aria-labelledby="pi-history-title">
+          <div class="pi-command__copy"><span class="pi-eyebrow"><span class="pi-pulse" aria-hidden="true"></span> HISTORY SIGNAL</span><h1 id="pi-history-title">See the pattern. <em>Spot the shift.</em></h1><p>Comparable, complete runs retained by Jenkins. Select a build to investigate its tests.</p></div>
+          <div class="pi-command__ornament" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
         </section>
+        <j:set var="rows" value="${it.rows}"/>
+        <j:choose><j:when test="${rows.size() == 0}"><div class="pi-notice" role="status">No comparable runs are available. Configure a stable comparison key in the reporter.</div></j:when>
+          <j:otherwise>
+            <section class="pi-surface pi-history-panel" aria-labelledby="pi-chart-title">
+              <div class="pi-section-head"><div><span class="pi-section-no">01 / FAILURE PRESSURE</span><h2 id="pi-chart-title">Unexpected share by build</h2></div><span class="pi-section-note">Older → newer · last ${rows.size()} runs</span></div>
+              <div class="pi-history-chart" role="list" aria-label="Unexpected test percentage by build">
+                <j:forEach var="row" items="${rows}"><a role="listitem" href="${rootURL}/${row.url}playwright-insights/" aria-label="${row.build}: ${row.unexpectedPercent} percent unexpected"><span class="pi-history-chart__value">${row.unexpectedPercent}%</span><span class="pi-history-chart__rail"><span style="height:${row.unexpectedPercent}%"></span></span><strong>${row.build}</strong></a></j:forEach>
+              </div>
+              <p class="pi-history-panel__note">Each bar is the share of logical tests with an unexpected outcome. Build retention limits this view.</p>
+            </section>
+            <section class="pi-surface pi-history-runs" aria-labelledby="pi-runs-title">
+              <div class="pi-section-head"><div><span class="pi-section-no">02 / RUN LEDGER</span><h2 id="pi-runs-title">Compare run composition</h2></div><span class="pi-section-note">Select a build for the full test dossier</span></div>
+              <div class="pi-key"><span class="pi-key--expected">Expected</span><span class="pi-key--unexpected">Unexpected</span><span class="pi-key--flaky">Flaky</span><span class="pi-key--skipped">Skipped</span></div>
+              <div class="pi-run-list"><j:forEach var="row" items="${rows}"><a class="pi-run" href="${rootURL}/${row.url}playwright-insights/">
+                <div class="pi-run__identity"><strong>${row.build}</strong><small>${row.startedAt}</small></div>
+                <div class="pi-run__visual"><div class="pi-stackbar" aria-hidden="true"><span class="pi-stackbar__expected" style="flex-grow:${row.expected}"></span><span class="pi-stackbar__unexpected" style="flex-grow:${row.unexpected}"></span><span class="pi-stackbar__flaky" style="flex-grow:${row.flaky}"></span><span class="pi-stackbar__skipped" style="flex-grow:${row.skipped}"></span></div><small>${row.total} logical tests</small></div>
+                <div class="pi-run__counts"><span><strong>${row.expected}</strong> expected</span><span><strong>${row.unexpected}</strong> unexpected</span><span><strong>${row.flaky}</strong> flaky</span><span><strong>${row.skipped}</strong> skipped</span></div>
+                <span class="pi-run__arrow" aria-hidden="true">↗</span>
+              </a></j:forEach></div>
+            </section>
+          </j:otherwise></j:choose>
       </main>
     </l:main-panel>
   </l:layout>

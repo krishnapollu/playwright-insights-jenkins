@@ -29,10 +29,11 @@ class PlaywrightInsightsStepTest {
         String fixture = Files.readString(Path.of("..", "schema", "fixtures", "outcomes.json"))
                 .replace("\"name\": \"chromium\"", "\"name\": \"Chrome browser\"");
         String base64 = Base64.getEncoder().encodeToString(fixture.getBytes(StandardCharsets.UTF_8));
+        String png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=";
         WorkflowJob job = j.createProject(WorkflowJob.class, "playwright");
         job.setDefinition(new CpsFlowDefinition("node { writeFile file: 'manifest.json', text: '" + base64
                 + "', encoding: 'Base64'; playwrightInsights results: 'manifest.json'; "
-                + "sh 'mkdir -p test-results/fails && printf evidence > test-results/fails/screenshot.png'; "
+                + "sh 'mkdir -p test-results/fails'; writeFile file: 'test-results/fails/screenshot.png', text: '" + png + "', encoding: 'Base64'; "
                 + "archiveArtifacts artifacts: 'test-results/**/*' }", true));
         WorkflowRun run = j.buildAndAssertSuccess(job);
         assertEquals(Result.SUCCESS, run.getResult());
@@ -42,8 +43,9 @@ class PlaywrightInsightsStepTest {
         assertEquals(2, action.getCounts().get("unexpected"));
         String page = j.createWebClient().goTo(run.getUrl() + "playwright-insights/").getWebResponse().getContentAsString();
         assertTrue(page.contains("Playwright Insights"));
-        assertTrue(page.contains("Understand this run at a glance"));
+        assertTrue(page.contains("Every detail, in view"));
         assertTrue(page.contains("expected failure"));
+        assertTrue(page.contains("pi-test-item is-selected"));
         assertTrue(page.contains("/plugin/playwright-insights/css/insights.css"));
         String filtered = j.createWebClient().goTo(run.getUrl() + "playwright-insights/?project=chromium&outcome=unexpected")
                 .getWebResponse().getContentAsString();
@@ -54,14 +56,21 @@ class PlaywrightInsightsStepTest {
         String detail = detailPage.getWebResponse().getContentAsString();
         assertTrue(detail.contains("screenshot.png"));
         assertTrue(detail.contains("Assertion failed"));
-        var evidence = detailPage.getAnchors().stream().filter(anchor -> anchor.getTextContent().contains("screenshot")).findFirst().orElseThrow();
-        assertEquals("evidence", evidence.click().getWebResponse().getContentAsString());
+        assertTrue(detail.contains("<img"));
+        var evidence = detailPage.getAnchors().stream().filter(anchor -> anchor.getHrefAttribute().contains("screenshot.png")).findFirst().orElseThrow();
+        assertEquals("image/png", evidence.click().getWebResponse().getContentType());
+        assertEquals("file", action.mediaKind(net.sf.json.JSONObject.fromObject("{\"name\":\"screenshot\",\"contentType\":\"image/png\",\"path\":\"test-results/fails/unsafe.html\"}")));
+        assertEquals("video", action.mediaKind(net.sf.json.JSONObject.fromObject("{\"name\":\"video\",\"contentType\":\"video/webm\",\"path\":\"test-results/fails/video.webm\"}")));
+        assertEquals("trace", action.mediaKind(net.sf.json.JSONObject.fromObject("{\"name\":\"trace\",\"contentType\":\"application/zip\",\"path\":\"test-results/fails/trace.zip\"}")));
+        assertTrue(j.createWebClient().goTo(run.getUrl() + "playwright-insights/?test=missing")
+                .getWebResponse().getContentAsString().contains("Choose a test to inspect"));
         WorkflowRun second = j.buildAndAssertSuccess(job);
         assertEquals(0, second.getAction(InsightsAction.class).getComparisonCounts().get("unclassified"));
         String history = j.createWebClient().goTo(second.getUrl() + "playwright-insights/?test=fail-1").getWebResponse().getContentAsString();
         assertTrue(history.contains("Continuing failure"));
         String trends = j.createWebClient().goTo(job.getUrl() + "playwright-trends/").getWebResponse().getContentAsString();
-        assertTrue(trends.contains("Playwright Trends"));
+        assertTrue(trends.contains("Compare run composition"));
+        assertEquals("Playwright Insights", job.getAction(TrendsAction.class).getDisplayName());
         assertTrue(trends.contains("#1"));
     }
 
@@ -127,5 +136,8 @@ class PlaywrightInsightsStepTest {
         assertEquals(6, action.getTestCount());
         assertEquals(2, action.getCounts().get("unexpected"));
         assertEquals(1, action.getCounts().get("flaky"));
+        assertTrue(action.manifest().tests().stream().map(value -> (net.sf.json.JSONObject) value)
+                .anyMatch(test -> test.optJSONArray("tags") != null && test.getJSONArray("tags").contains("@critical")
+                        && test.getJSONArray("attempts").getJSONObject(0).getJSONArray("steps").size() > 0));
     }
 }

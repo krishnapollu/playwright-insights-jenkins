@@ -16,7 +16,7 @@ public class TrendsAction implements Action {
     private TrendsAction(Job<?, ?> job) { this.job = job; }
 
     @Override public String getIconFileName() { return "graph.png"; }
-    @Override public String getDisplayName() { return "Playwright Trends"; }
+    @Override public String getDisplayName() { return "Playwright Insights"; }
     @Override public String getUrlName() { return "playwright-trends"; }
 
     public List<TrendRow> getRows() {
@@ -57,6 +57,8 @@ public class TrendsAction implements Action {
         public int getUnexpected() { return counts.getOrDefault("unexpected", 0); }
         public int getFlaky() { return counts.getOrDefault("flaky", 0); }
         public int getSkipped() { return counts.getOrDefault("skipped", 0); }
+        public int getTotal() { return getExpected() + getUnexpected() + getFlaky() + getSkipped(); }
+        public int getUnexpectedPercent() { return getTotal() == 0 ? 0 : Math.round(getUnexpected() * 100f / getTotal()); }
     }
 
     @Extension

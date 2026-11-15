@@ -22,6 +22,7 @@ test('real Playwright run emits a schema-valid manifest with logical outcomes', 
     const validate = new Ajv2020().compile(schema);
     assert.equal(validate(manifest), true, JSON.stringify(validate.errors));
     assert.equal(manifest.run.complete, true);
+    assert.equal(manifest.schemaVersion, '1.1.0');
     assert.equal(manifest.tests.length, 6);
     assert.deepEqual(Object.fromEntries(manifest.tests.map(item => [item.titlePath.at(-1), item.outcome])), {
       passes: 'expected', fails: 'unexpected', flaky: 'flaky',
@@ -29,6 +30,11 @@ test('real Playwright run emits a schema-valid manifest with logical outcomes', 
     });
     assert.deepEqual(manifest.tests.find(item => item.titlePath.at(-1) === 'flaky').attempts.map(item => item.retry), [0, 1]);
     assert.ok(manifest.tests.find(item => item.titlePath.at(-1) === 'fails').attempts[0].attachments[0].path.startsWith('test-results/'));
+    const failure = manifest.tests.find(item => item.titlePath.at(-1) === 'fails');
+    assert.ok(failure.tags.includes('@critical'));
+    assert.ok(failure.annotations.some(item => item.type === 'owner' && item.description === 'QA'));
+    assert.ok(failure.attempts[0].steps.some(item => item.title === 'Compare values'));
+    assert.match(failure.attempts[0].stdout, /Calculation diagnostic/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

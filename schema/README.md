@@ -8,6 +8,6 @@ The importer must reject a file larger than 25 MiB **before parsing**. The schem
 
 Test identity is a stable hash of project ID, repository-relative file, title path, and repeat-each index. The hash algorithm and path normalization will be fixed with the reporter implementation. Consumers must treat `id` as opaque. Attachment paths are references only; Jenkins must verify each against archived artifacts before showing a link.
 
-The `1.0.0` schema version is exact. Producers must not emit unknown fields into this version. A future backward-compatible minor version needs an explicit compatibility decision and contract tests before either component accepts it.
+The reporter emits `1.1.0`, which adds bounded tags, annotations, worker index, step timing, and stdout/stderr previews. The importer also accepts legacy `1.0.0` manifests. Unknown fields remain invalid in both versions.
 
 Run `npm ci && npm test` from the repository root.

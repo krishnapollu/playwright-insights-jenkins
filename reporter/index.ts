@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
-import type { FullConfig, FullResult, Reporter, Suite, TestCase } from '@playwright/test/reporter';
+import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestStep } from '@playwright/test/reporter';
 
 type Options = {
   outputFile?: string;
@@ -89,7 +89,7 @@ export default class JenkinsInsightsReporter implements Reporter {
       return;
     }
     const manifest = {
-      schemaVersion: '1.0.0',
+      schemaVersion: '1.1.0',
       producer: { name: 'playwright-jenkins-insights', version: '0.1.0' },
       run: {
         id: randomUUID(),
@@ -140,13 +140,25 @@ export default class JenkinsInsightsReporter implements Reporter {
     for (const attempt of test.results) {
       if (attempt.errors.length > 8 || attempt.attachments.length > 16) this.incomplete(`Attempt details truncated for ${id}`);
     }
+    const annotations = test.results.at(-1)?.annotations ?? test.annotations;
+    if (test.tags.length > 16 || annotations.length > 16) this.warn(`Tags or annotations truncated for ${id}`);
     return {
       id, projectId, file: file || 'unknown', line: Math.max(1, test.location.line),
       titlePath: stableTitle, repeatEachIndex: test.repeatEachIndex,
       expectedStatus: test.expectedStatus, outcome: test.outcome(),
+      tags: test.tags.slice(0, 16).map(tag => this.preview(tag, 128)),
+      annotations: annotations.slice(0, 16).filter(annotation => annotation.type).map(annotation => ({
+        type: this.preview(annotation.type, 128),
+        ...(annotation.description && { description: this.preview(annotation.description, 512) })
+      })),
       attempts: test.results.slice(0, 16).map((attempt, index) => {
+        const stdout = this.preview(attempt.stdout.map(chunk => chunk.toString()).join(''), 4096);
+        const stderr = this.preview(attempt.stderr.map(chunk => chunk.toString()).join(''), 4096);
         return {
           retry: index, status: attempt.status, durationMs: Math.max(0, Math.round(attempt.duration)),
+          workerIndex: attempt.workerIndex,
+          ...(stdout && { stdout }), ...(stderr && { stderr }),
+          steps: this.steps(attempt.steps, id),
           errors: attempt.errors.slice(0, 8).map(error => ({
             message: this.preview(error.message || error.value || 'Unknown error', 8192),
             ...(error.stack && { stack: this.preview(error.stack, 32768) })
@@ -166,5 +178,25 @@ export default class JenkinsInsightsReporter implements Reporter {
         };
       })
     };
+  }
+
+  private steps(roots: TestStep[], id: string) {
+    const rows: { title: string; category: string; durationMs: number; depth: number; error?: string }[] = [];
+    let truncated = false;
+    const visit = (steps: TestStep[], depth: number) => {
+      for (const step of steps) {
+        if (rows.length >= 128 || depth > 4) { truncated = true; return; }
+        rows.push({
+          title: this.preview(step.title || 'Untitled step', 256),
+          category: this.preview(step.category || 'other', 64),
+          durationMs: Math.max(0, Math.round(step.duration)), depth,
+          ...(step.error && { error: this.preview(step.error.message || step.error.value || 'Step failed', 1024) })
+        });
+        visit(step.steps, depth + 1);
+      }
+    };
+    visit(roots, 0);
+    if (truncated) this.warn(`Steps truncated for ${id}`);
+    return rows;
   }
 }
