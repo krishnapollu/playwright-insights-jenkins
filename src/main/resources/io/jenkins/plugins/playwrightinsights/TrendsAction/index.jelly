@@ -19,7 +19,7 @@
               <div><span>Latest run</span><a href="${rootURL}/${latest.url}playwright-insights/"><strong>${latest.build}</strong></a><small>${latest.startedAt}</small></div>
               <div><span>Total tests</span><strong>${latest.total}</strong><small>Across all projects</small></div>
               <div><span>Duration</span><strong>${latest.durationDisplay}</strong><small>Run elapsed time</small></div>
-              <div><span>Recorded assertions</span><strong>${latest.recordedAssertions}</strong><small>From Playwright expect steps</small></div>
+              <div><span>Recorded assertions</span><strong>${latest.assertionDetailAvailable ? latest.recordedAssertions : '—'}</strong><small>${latest.assertionDetailAvailable ? 'From Playwright expect steps' : 'Not in Playwright JSON'}</small></div>
               <div><span>Needs review</span><strong>${latest.unexpected}</strong><small>${latest.unexpectedPercent}% did not meet expectation</small></div>
               <div><span>Flaky</span><strong>${latest.flaky}</strong><small>Passed after retry</small></div>
             </section>

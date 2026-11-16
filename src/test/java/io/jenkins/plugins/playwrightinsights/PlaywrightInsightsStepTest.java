@@ -150,4 +150,86 @@ class PlaywrightInsightsStepTest {
                 .anyMatch(test -> test.optJSONArray("tags") != null && test.getJSONArray("tags").contains("@critical")
                         && test.getJSONArray("attempts").getJSONObject(0).getJSONArray("steps").size() > 0));
     }
+
+    @Test void nativePlaywrightJsonImportsWithoutCustomReporter(JenkinsRule j) throws Exception {
+        String png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=";
+        String report = """
+                {"config":{"rootDir":".","version":"1.64.0","projects":[{"id":"","name":""}]},
+                 "suites":[{"title":"checkout.spec.ts","file":"checkout.spec.ts","specs":[
+                   {"title":"can pay","file":"checkout.spec.ts","line":3,"tags":["critical"],"tests":[
+                     {"projectId":"","expectedStatus":"passed","status":"unexpected","annotations":[],"results":[
+                       {"retry":0,"workerIndex":0,"status":"failed","duration":120,"errors":[{"message":"Payment failed"}],
+                        "stdout":[{"text":"Payment diagnostic"}],"stderr":[],"steps":[{"title":"Place order","duration":50}],
+                        "attachments":[{"name":"screenshot","contentType":"image/png","body":"%s"},
+                                       {"name":"video","contentType":"video/webm","path":"test-results/fails/video.webm"},
+                                       {"name":"trace","contentType":"application/zip","path":"test-results/fails/trace.zip"}]}]}]}]}],
+                 "errors":[],"stats":{"startTime":"2026-11-14T20:00:00.000Z","duration":450,"expected":0,"unexpected":1,"flaky":0,"skipped":0}}
+                """.formatted(png);
+        String base64 = Base64.getEncoder().encodeToString(report.getBytes(StandardCharsets.UTF_8));
+        WorkflowJob job = j.createProject(WorkflowJob.class, "native-json");
+        job.setDefinition(new CpsFlowDefinition("node { sh 'mkdir -p test-results/fails'; "
+                + "writeFile file: 'test-results/fails/video.webm', text: 'AAAA', encoding: 'Base64'; "
+                + "writeFile file: 'test-results/fails/trace.zip', text: 'AAAA', encoding: 'Base64'; "
+                + "writeFile file: 'results.json', text: '" + base64
+                + "', encoding: 'Base64'; playwrightInsights results: 'results.json', comparisonKey: 'checkout'; "
+                + "archiveArtifacts artifacts: 'test-results/**/*' }", true));
+        WorkflowRun run = j.buildAndAssertSuccess(job);
+        InsightsAction action = run.getAction(InsightsAction.class);
+        assertNotNull(action);
+        assertEquals(1, action.getTestCount());
+        assertTrue(action.isComplete());
+        assertEquals("checkout", action.manifest().comparisonKey());
+        assertEquals(1, action.getStatusCounts().get("failed"));
+        String detail = j.createWebClient().goTo(run.getUrl() + "playwright-insights/?test="
+                + action.manifest().tests().getJSONObject(0).getString("id")).getWebResponse().getContentAsString();
+        assertTrue(detail.contains("Payment failed"));
+        assertTrue(detail.contains("Payment diagnostic"));
+        assertTrue(detail.contains("Place order"));
+        assertTrue(detail.contains("Assertions recorded: not available in JSON"));
+        assertTrue(detail.contains("<img"));
+        assertTrue(detail.contains("<video"));
+        assertTrue(detail.contains("Trace recording"));
+        assertTrue(j.createWebClient().goTo(job.getUrl() + "playwright-trends/")
+                .getWebResponse().getContentAsString().contains("Not in Playwright JSON"));
+        assertTrue(Files.exists(Path.of(run.getRootDir().toString(), "archive", "test-results", "playwright-insights")));
+        byte[] partial = PlaywrightJson.normalize(report.replace("\"unexpected\":1", "\"unexpected\":2")
+                .getBytes(StandardCharsets.UTF_8), j.jenkins.getRootDir().toPath(), null);
+        assertFalse(Manifest.parse(partial).complete());
+        Path workspace = j.jenkins.getRootDir().toPath();
+        Path video = workspace.resolve("test-results/fails/video.webm");
+        Files.createDirectories(video.getParent());
+        Files.write(video, new byte[] {0});
+        byte[] absolute = PlaywrightJson.normalize(report.replace("test-results/fails/video.webm", video.toString())
+                .getBytes(StandardCharsets.UTF_8), workspace, null);
+        assertEquals("test-results/fails/video.webm", Manifest.parse(absolute).tests().getJSONObject(0)
+                .getJSONArray("attempts").getJSONObject(0).getJSONArray("attachments").getJSONObject(1).getString("path"));
+        net.sf.json.JSONObject repeated = net.sf.json.JSONObject.fromObject(report);
+        net.sf.json.JSONArray copies = repeated.getJSONArray("suites").getJSONObject(0).getJSONArray("specs")
+                .getJSONObject(0).getJSONArray("tests");
+        copies.add(net.sf.json.JSONObject.fromObject(copies.getJSONObject(0).toString()));
+        repeated.getJSONObject("stats").put("unexpected", 2);
+        Manifest repeatManifest = Manifest.parse(PlaywrightJson.normalize(repeated.toString().getBytes(StandardCharsets.UTF_8), workspace, null));
+        assertEquals(2, repeatManifest.tests().size());
+        assertFalse(repeatManifest.tests().getJSONObject(0).getString("id")
+                .equals(repeatManifest.tests().getJSONObject(1).getString("id")));
+        assertEquals(action.manifest().tests().getJSONObject(0).getString("id"),
+                Manifest.parse(PlaywrightJson.normalize(report.getBytes(StandardCharsets.UTF_8), workspace, null))
+                        .tests().getJSONObject(0).getString("id"));
+    }
+
+    @Test void realPlaywrightJsonImports(JenkinsRule j) throws Exception {
+        String path = System.getProperty("playwright.insights.realJson");
+        Assumptions.assumeTrue(path != null, "run scripts/phase0.sh for this end-to-end check");
+        String report = Files.readString(Path.of(path));
+        String base64 = Base64.getEncoder().encodeToString(report.getBytes(StandardCharsets.UTF_8));
+        WorkflowJob job = j.createProject(WorkflowJob.class, "real-json");
+        job.setDefinition(new CpsFlowDefinition("node { writeFile file: 'results.json', text: '" + base64
+                + "', encoding: 'Base64'; playwrightInsights results: 'results.json' }", true));
+        WorkflowRun run = j.buildAndAssertSuccess(job);
+        InsightsAction action = run.getAction(InsightsAction.class);
+        assertNotNull(action);
+        assertEquals(6, action.getTestCount());
+        assertEquals(2, action.getCounts().get("unexpected"));
+        assertEquals(1, action.getCounts().get("flaky"));
+    }
 }

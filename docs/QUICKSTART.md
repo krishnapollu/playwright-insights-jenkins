@@ -1,12 +1,10 @@
 # Local quickstart
 
-This guide uses the local reporter package and Jenkins plugin build. The reporter package is not published to npm yet.
+Playwright Insights imports Playwright's built-in JSON report. Your test suite does not need an additional reporter package.
 
 ## Playwright project
 
-From this repository, run `npm ci && npm run build:reporter && npm pack ./reporter`. In your Playwright project, install the resulting `.tgz` as a dev dependency. The reporter currently targets Playwright Test 1.64.x and Node 24; support for other versions has not been verified.
-
-Add the reporter alongside any existing console, JUnit, or HTML reporters:
+Keep your existing reporters and add `json` in `playwright.config.ts`:
 
 ```ts
 import { defineConfig } from '@playwright/test';
@@ -14,27 +12,25 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   reporter: [
     ['list'],
-    ['playwright-jenkins-insights', {
-      outputFile: 'playwright-insights/manifest.json',
-      comparisonKey: 'my-complete-suite',
-      metadata: { selection: 'all' },
-      redact: ['a-known-secret-value']
-    }]
-  ]
+    ['json', { outputFile: 'playwright-insights/results.json' }]
+  ],
+  use: {
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+    trace: 'retain-on-failure'
+  }
 });
 ```
 
-The comparison key must identify the same full suite across builds. Give filtered or sharded runs different keys, or omit the key to disable comparisons. The reporter writes one manifest at the end of a logical Playwright execution. A killed runner may leave no manifest.
-
-`redact` replaces configured literal strings in titles, annotations, steps, output previews, errors, stacks, and metadata. It is not a general secret scanner. The reporter omits in-memory attachment bodies; archive file-backed traces, screenshots, and videos to make evidence available.
+The JSON report must include the full suite. Leave the JSON reporter's `onlyFailures` option off. The `use` settings are examples for capturing failure evidence; keep your existing capture settings if they already produce the files you need.
 
 ## Jenkins
 
-Build the plugin from the repository root with JDK 21 and Maven: `mvn verify`. The POM targets Jenkins 2.568.3. Install the generated `target/playwright-insights.hpi` in a compatible Jenkins controller with Pipeline support.
+Build the plugin from the repository root with JDK 21 and Maven: `mvn verify`. The POM targets Jenkins 2.568.3. Upload `target/playwright-insights.hpi` through **Manage Jenkins → Plugins → Advanced → Deploy Plugin**, then restart Jenkins. Jenkins documents [manual plugin installation](https://www.jenkins.io/doc/book/managing/plugins/#from-the-web-ui).
 
-For a local UI preview, run `mvn hpi:run -Dport=8092` from the repository root, then open `http://localhost:8092/jenkins/`. This starts a development Jenkins controller with the plugin loaded. Its local state lives in `work/`; stop it with Ctrl+C. The preview avoids a permanent Jenkins installation.
+For a local UI preview, run `mvn hpi:run -Dport=8092` from the repository root, then open `http://localhost:8092/jenkins/`. This starts a development Jenkins controller with the plugin loaded. Its local state lives in `work/`; stop it with Ctrl+C.
 
-Run `bash scripts/phase0.sh` to execute the real six-test Playwright fixture and import its generated manifest into an ephemeral Jenkins Test Harness controller. The fixture intentionally produces a nonzero Playwright exit status.
+Add the import step to your Playwright project's `Jenkinsfile`:
 
 ```groovy
 pipeline {
@@ -49,16 +45,21 @@ pipeline {
   }
   post {
     always {
-      playwrightInsights results: 'playwright-insights/manifest.json'
-      archiveArtifacts artifacts: 'playwright-insights/manifest.json,test-results/**/*',
+      playwrightInsights results: 'playwright-insights/results.json',
+                         comparisonKey: 'my-complete-suite'
+      archiveArtifacts artifacts: 'playwright-insights/results.json,test-results/**/*',
                        allowEmptyArchive: true
     }
   }
 }
 ```
 
-The import step logs a warning and leaves the build result unchanged if the manifest is missing or invalid. `failOnImportError: true` makes the step fail; place archiving in `try/finally` or `catchError` in that mode. The manifest path must be relative to the workspace used by the test execution. One manifest import per build is supported. Parallel branches and shards need separate builds; manifest merging is not available yet.
+The test command and import step must use the same workspace. `comparisonKey` groups equivalent full-suite runs for comparisons; give filtered runs a different key or omit it. The import step logs a warning and leaves the build result unchanged if the JSON report is missing or invalid. `failOnImportError: true` makes the step fail; place archiving in `try/finally` or `catchError` in that mode. One report import per build is supported. Parallel branches and shards need separate builds; report merging is not available yet.
 
-Archived PNG, JPEG, WebP, WebM, and MP4 evidence appears inline in the test detail when its declared type matches its file extension. Other files remain downloads. Trace steps and errors appear inline; the full Playwright Trace Viewer is not embedded because its hosted version may be blocked by Jenkins content security policy or cross-origin rules for authenticated artifacts. Download the trace and run `npx playwright show-trace trace.zip` for the complete viewer. Jenkins access rules and build retention apply to the manifest snapshot and artifacts. The reporter records error text and paths; ensure test names, output, annotations, and attachments contain no secrets.
+Archive `test-results/**/*` so file-backed images, videos, and traces remain available. The plugin also writes in-memory image and video attachments from the JSON report into `test-results/playwright-insights/` during import. PNG, JPEG, WebP, WebM, and MP4 evidence appears inline when the declared type matches the file extension. Other files remain downloads. The full Playwright Trace Viewer is not embedded; download the trace and run `npx playwright show-trace trace.zip` for the complete viewer.
 
-The run view shows final Playwright statuses and links back to the job dashboard. Durations include all attempts for a test. “Recorded assertions” counts `expect` steps present in the manifest, including retries; older manifests or truncated step lists may show fewer than the tests actually executed.
+The built-in JSON report contains statuses, retries, durations, errors, output, annotations, attachments, and some test steps. It does not expose every assertion step, so **Recorded assertions** may be zero even when tests use `expect`. The optional [enhanced reporter](../reporter/README.md) writes the plugin's versioned manifest with more step and assertion detail and supports literal redaction. Both formats are accepted by `playwrightInsights`.
+
+The reporter records error text and paths. Ensure test names, output, annotations, and attachments contain no secrets. Jenkins access rules and build retention apply to the report snapshot and archived artifacts.
+
+Run `bash scripts/phase0.sh` to exercise a six-test fixture with both report formats in the Jenkins Test Harness. The fixture intentionally produces a nonzero Playwright exit status.

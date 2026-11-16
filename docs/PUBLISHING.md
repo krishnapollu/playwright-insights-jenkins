@@ -1,6 +1,6 @@
 # Publishing Playwright Insights
 
-This repository contains two release artifacts: the Jenkins plugin (`playwright-insights`) and the Playwright reporter (`playwright-jenkins-insights`). Publishing the source on GitHub does not distribute either artifact.
+The Jenkins plugin (`playwright-insights`) is the only artifact required for the default setup, which imports Playwright's built-in JSON report. The separate reporter (`playwright-jenkins-insights`) is optional for richer step detail and redaction. Publishing the source on GitHub does not distribute either artifact.
 
 ## Local release checks
 
@@ -36,4 +36,4 @@ The root `Jenkinsfile` prepares the plugin for ci.jenkins.io. The Maven project 
 
 ## Playwright reporter
 
-The reporter is a separate npm package. After verifying account ownership and package contents, publish it from `reporter/` with `npm publish --access public`. Do not publish a version until the plugin installation instructions reference that reporter version. The package name has not been reserved on npm yet.
+The reporter is a separate, optional npm package. Its release can wait until there is demand for enhanced detail. After verifying account ownership and package contents, publish it from `reporter/` with `npm publish --access public`. The package name has not been reserved on npm yet.

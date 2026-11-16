@@ -15,7 +15,7 @@
             <span class="pi-eyebrow">RUN OVERVIEW · ${it.complete ? 'COMPLETE' : 'PARTIAL'}</span>
             <h1 id="pi-overview-title">Build ${it.buildName} results</h1>
             <p>${it.testCount} tests across ${it.projectSummaries.size()} ${it.projectSummaries.size() == 1 ? 'project' : 'projects'}. Review statuses, recent changes, and supporting evidence.</p>
-            <div class="pi-command__meta"><span>Started ${it.startedAt}</span><span>Duration ${it.durationDisplay}</span><span>Assertions recorded: ${it.recordedAssertions}</span></div>
+            <div class="pi-command__meta"><span>Started ${it.startedAt}</span><span>Duration ${it.durationDisplay}</span><span>Assertions recorded: ${it.assertionDetailAvailable ? it.recordedAssertions : 'not available in JSON'}</span></div>
           </div>
           <div class="pi-orbit" role="img" aria-label="${it.statusCounts.passed} passed, ${it.statusCounts.failed} failed, ${it.statusCounts.timedOut} timed out, ${it.statusCounts.skipped} skipped, ${it.statusCounts.interrupted} interrupted">
             <div class="pi-orbit__ring" style="${it.statusChartStyle}"><div class="pi-orbit__core"><strong>${it.testCount}</strong><span>TESTS</span></div></div>
@@ -97,7 +97,7 @@
                 <j:otherwise>
                   <div class="pi-inspector__head"><span class="pi-section-no">TEST DETAIL · ${selected.projectId}</span><span class="pi-status pi-status--${selected.status}">${selected.statusLabel}</span></div>
                   <h3 class="pi-inspector__title">${selected.title}</h3>
-                  <div class="pi-inspector__meta"><span>${selected.file}:${selected.line}</span><span>Expected status: ${selected.expectedStatus}</span><span>Duration: ${selected.durationDisplay}</span><span>Assertions recorded: ${selected.assertionCount}<j:if test="${selected.failedAssertionCount > 0}"> · ${selected.failedAssertionCount} failed</j:if></span></div>
+                  <div class="pi-inspector__meta"><span>${selected.file}:${selected.line}</span><span>Expected status: ${selected.expectedStatus}</span><span>Duration: ${selected.durationDisplay}</span><j:if test="${it.assertionDetailAvailable}"><span>Assertions recorded: ${selected.assertionCount}<j:if test="${selected.failedAssertionCount > 0}"> · ${selected.failedAssertionCount} failed</j:if></span></j:if></div>
                   <j:if test="${selected.outcomeNote != ''}"><p class="pi-outcome-note">${selected.outcomeNote}</p></j:if>
                   <p class="pi-classification">${it.classification}</p>
                   <j:if test="${selected.tags.size() > 0}"><div class="pi-chips"><span class="pi-chips__label">TAGS</span><j:forEach var="tag" items="${selected.tags}"><span class="pi-chip">${tag}</span></j:forEach></div></j:if>

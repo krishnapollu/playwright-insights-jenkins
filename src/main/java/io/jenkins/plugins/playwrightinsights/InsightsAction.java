@@ -97,6 +97,10 @@ public class InsightsAction implements RunAction2, Serializable {
         return count;
     }
 
+    public boolean isAssertionDetailAvailable() {
+        return !"playwright-json".equals(manifest().root().getJSONObject("producer").getString("name"));
+    }
+
     public String getStatusChartStyle() {
         Map<String, Integer> counts = getStatusCounts();
         int total = counts.values().stream().mapToInt(Integer::intValue).sum();

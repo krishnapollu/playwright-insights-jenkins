@@ -5,7 +5,9 @@
 **Working name:** Playwright Insights for Jenkins  
 **Proposed license:** MIT (final decision before publishing)  
 **Primary audience:** QA engineers, SDETs, test automation leads, CI maintainers  
-**Repository model:** Monorepo with a Java/Jenkins plugin, a TypeScript reporter, JSON schema, fixtures, and documentation
+**Repository model:** Monorepo with a Java/Jenkins plugin, an optional TypeScript reporter, JSON schema, fixtures, and documentation
+
+**Implementation update:** The plugin now accepts Playwright's built-in JSON report directly. The reporter and versioned manifest described below remain an optional enhanced path; see [the quickstart](QUICKSTART.md) for the default setup.
 
 > **Product promise:** Investigate failures, track flaky tests, and understand Playwright execution without leaving Jenkins.
 
@@ -15,9 +17,9 @@ Jenkins is effective at scheduling and orchestrating CI jobs; Playwright produce
 
 The product consists of:
 
-1. **A companion TypeScript Playwright reporter** (`@<scope>/playwright-jenkins-insights`, provisional) that collects Playwright-specific results and writes a stable, versioned manifest.
-2. **A Jenkins plugin** (`playwright-insights`, provisional) that imports that manifest as a Pipeline or post-build action and presents Jenkins-native views, test-level history, and artifact links.
-3. **A shared schema and contract test suite** to keep the two independent release streams compatible.
+1. **A Jenkins plugin** (`playwright-insights`) that imports Playwright's built-in JSON report and presents Jenkins-native views, test-level history, and artifact links.
+2. **An optional TypeScript Playwright reporter** (`playwright-jenkins-insights`) that writes a versioned manifest when richer step detail or literal redaction is needed.
+3. **A shared schema and contract test suite** for the optional manifest path.
 
 **MVP principle:** A useful, trustworthy failure investigation experience is more important than a large feature count. No AI or performance prediction is necessary for v1.
 
@@ -85,7 +87,7 @@ These are **targets**, not claims of achieved performance or market demand.
 
 | Feature | Priority | MVP v0.1 | Later |
 |---|---|---|---|
-| Reporter-generated versioned manifest | P0 | Yes | — |
+| Playwright JSON import; optional enhanced manifest | P0 | Yes | — |
 | Pipeline step and failure-safe importer | P0 | Yes | — |
 | Run counts: expected/unexpected/flaky/skipped | P0 | Yes | — |
 | Per-project/browser breakdown | P0 | Yes | — |
@@ -120,7 +122,7 @@ These are **targets**, not claims of achieved performance or market demand.
 ### Journey C — Jenkins administrator integrates an existing pipeline
 
 1. Install the Jenkins plugin.
-2. Add the npm reporter to a Playwright project and configure the manifest output.
+2. Enable Playwright's built-in JSON reporter in the project configuration.
 3. Invoke `playwrightInsights` in `post { always { ... } }`.
 4. Archive result artifacts using standard Jenkins steps.
 5. Verify the build displays an import success or explicit import warning.

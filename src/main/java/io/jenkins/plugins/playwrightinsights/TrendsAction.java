@@ -35,7 +35,7 @@ public class TrendsAction implements Action {
             if (baseline == null) { baseline = manifest; baselineAction = action; }
             if (!baselineAction.comparable(baseline, manifest)) continue;
             rows.add(new TrendRow(run.getDisplayName(), run.getUrl(), manifest.run().getString("startedAt"),
-                    manifest.run().getLong("durationMs"), action.getRecordedAssertions(), action.getStatusCounts(), action.getCounts()));
+                    manifest.run().getLong("durationMs"), action.getRecordedAssertions(), action.isAssertionDetailAvailable(), action.getStatusCounts(), action.getCounts()));
         }
         return rows;
     }
@@ -46,15 +46,17 @@ public class TrendsAction implements Action {
         private final String startedAt;
         private final long durationMs;
         private final int recordedAssertions;
+        private final boolean assertionDetailAvailable;
         private final java.util.Map<String, Integer> statuses;
         private final java.util.Map<String, Integer> outcomes;
-        TrendRow(String build, String url, String startedAt, long durationMs, int recordedAssertions,
+        TrendRow(String build, String url, String startedAt, long durationMs, int recordedAssertions, boolean assertionDetailAvailable,
                 java.util.Map<String, Integer> statuses, java.util.Map<String, Integer> outcomes) {
             this.build = build;
             this.url = url;
             this.startedAt = startedAt;
             this.durationMs = durationMs;
             this.recordedAssertions = recordedAssertions;
+            this.assertionDetailAvailable = assertionDetailAvailable;
             this.statuses = statuses;
             this.outcomes = outcomes;
         }
@@ -63,6 +65,7 @@ public class TrendsAction implements Action {
         public String getStartedAt() { return startedAt; }
         public String getDurationDisplay() { return InsightsAction.formatDuration(durationMs); }
         public int getRecordedAssertions() { return recordedAssertions; }
+        public boolean isAssertionDetailAvailable() { return assertionDetailAvailable; }
         public int getPassed() { return statuses.getOrDefault("passed", 0); }
         public int getFailed() { return statuses.getOrDefault("failed", 0); }
         public int getTimedOut() { return statuses.getOrDefault("timedOut", 0); }

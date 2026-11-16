@@ -18,5 +18,10 @@ if PLAYWRIGHT_INSIGHTS_OUTPUT_FILE="$tmp_dir/manifest.json" ./node_modules/.bin/
 fi
 
 test -s "$tmp_dir/manifest.json"
+if PLAYWRIGHT_JSON_OUTPUT_FILE="$tmp_dir/results.json" ./node_modules/.bin/playwright test --config reporter/fixtures/playwright.config.ts --reporter=json; then
+  echo "Expected the native Playwright JSON fixture run to fail" >&2
+  exit 1
+fi
+test -s "$tmp_dir/results.json"
 cd "$repo_root"
-mvn -Dplaywright.insights.realManifest="$tmp_dir/manifest.json" verify
+mvn -Dplaywright.insights.realManifest="$tmp_dir/manifest.json" -Dplaywright.insights.realJson="$tmp_dir/results.json" verify
