@@ -2,7 +2,7 @@
 <j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
   <l:layout title="Playwright Insights">
     <l:main-panel>
-      <link rel="stylesheet" href="${resURL}/plugin/playwright-insights/css/insights.css"/>
+      <link rel="stylesheet" href="${resURL}/plugin/playwright-insights/css/insights.css?v=3"/>
       <main class="pi">
         <header class="pi-brandbar">
           <div class="pi-brand"><span class="pi-brand__mark" aria-hidden="true"><i></i><i></i><i></i></span><span><strong>Playwright</strong><b>Insights</b></span></div>
@@ -19,9 +19,15 @@
               <div><span>Latest run</span><a href="${rootURL}/${latest.url}playwright-insights/"><strong>${latest.build}</strong></a><small>${latest.startedAt}</small></div>
               <div><span>Total tests</span><strong>${latest.total}</strong><small>Across all projects</small></div>
               <div><span>Duration</span><strong>${latest.durationDisplay}</strong><small>Run elapsed time</small></div>
-              <div><span>Recorded assertions</span><strong>${latest.assertionDetailAvailable ? latest.recordedAssertions : '—'}</strong><small>${latest.assertionDetailAvailable ? 'From Playwright expect steps' : 'Not in Playwright JSON'}</small></div>
+              <div><span>Recorded assertions</span><strong>${latest.assertionDetailAvailable ? latest.recordedAssertions : '—'}</strong><small>${latest.assertionDetailAvailable ? 'From Playwright expect steps' : 'Add a matching blob report'}</small></div>
               <div><span>Needs review</span><strong>${latest.unexpected}</strong><small>${latest.unexpectedPercent}% did not meet expectation</small></div>
-              <div><span>Flaky</span><strong>${latest.flaky}</strong><small>Passed after retry</small></div>
+              <div><span>Retry-flaky tests</span><strong>${latest.flaky}</strong><small>Playwright outcome in this run</small></div>
+            </section>
+            <j:set var="specs" value="${it.specSummary}"/>
+            <section class="pi-surface pi-spec-overview" aria-labelledby="pi-spec-overview-title">
+              <div class="pi-section-head"><div><span class="pi-section-no">SPEC HEALTH</span><h2 id="pi-spec-overview-title">Quality across retained runs</h2></div></div>
+              <div class="pi-spec-overview__body"><div class="pi-spec-overview__metrics"><div><strong>${specs.total}</strong><span>Specs observed</span></div><div><strong>${specs.alwaysPassing}</strong><span>Always passing</span></div><div><strong>${specs.failing}</strong><span>Failing now</span></div><div><strong>${specs.retrySpecs}</strong><span>With retry passes</span></div><div><strong>${specs.mixedSpecs}</strong><span>With changing tests</span></div></div><a class="pi-spec-overview__cta" href="${rootURL}/${it.specsUrl}">Explore spec and test history <span aria-hidden="true">→</span></a></div>
+              <p class="pi-history-panel__note">Based on ${specs.runs} complete, comparable runs still retained by Jenkins.</p>
             </section>
             <section class="pi-surface pi-history-panel" aria-labelledby="pi-chart-title">
               <div class="pi-section-head"><div><span class="pi-section-no">TREND</span><h2 id="pi-chart-title">Tests needing review by run</h2></div><span class="pi-section-note">Older → newer · last ${rows.size()} runs</span></div>

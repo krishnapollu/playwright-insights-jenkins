@@ -24,11 +24,16 @@ final class PlaywrightJson {
     private final JSONArray warnings = new JSONArray();
     private final JSONArray tests = new JSONArray();
     private final Map<String, String> projects = new LinkedHashMap<>();
+    private final Map<String, JSONObject> nativeTests = new LinkedHashMap<>();
     private String rootDir;
 
     private PlaywrightJson(Path workspace) { this.workspace = workspace; }
 
     static byte[] normalize(byte[] bytes, Path workspace, String comparisonKey) throws IOException {
+        return normalize(bytes, workspace, comparisonKey, null);
+    }
+
+    static byte[] normalize(byte[] bytes, Path workspace, String comparisonKey, Path blobFile) throws IOException {
         if (bytes.length > Manifest.MAX_BYTES) throw new IOException("report exceeds 25 MiB");
         JSONObject source;
         try {
@@ -40,13 +45,13 @@ final class PlaywrightJson {
         if (!source.containsKey("config") || !source.containsKey("suites") || !source.containsKey("stats"))
             throw new IOException("expected a Playwright JSON report or Playwright Insights manifest");
         try {
-            return new PlaywrightJson(workspace).convert(source, comparisonKey);
+            return new PlaywrightJson(workspace).convert(source, comparisonKey, blobFile);
         } catch (RuntimeException error) {
             throw new IOException("invalid Playwright JSON report", error);
         }
     }
 
-    private byte[] convert(JSONObject source, String comparisonKey) throws IOException {
+    private byte[] convert(JSONObject source, String comparisonKey, Path blobFile) throws IOException {
         JSONObject config = source.getJSONObject("config");
         JSONObject stats = source.getJSONObject("stats");
         rootDir = config.optString("rootDir", "");
@@ -61,6 +66,29 @@ final class PlaywrightJson {
         JSONArray normalizedProjects = new JSONArray();
         for (String name : projects.values().stream().distinct().toList()) normalizedProjects.add(object("id", name, "name", name));
         for (Object suite : source.getJSONArray("suites")) visitSuite((JSONObject) suite, List.of());
+        boolean assertionsAvailable = false;
+        if (blobFile != null) {
+            try {
+                PlaywrightBlob.Data blob = PlaywrightBlob.read(blobFile);
+                if (blob.startedAt() != Instant.parse(stats.getString("startTime")).toEpochMilli()) {
+                    warn("Blob and JSON reports come from different runs; assertion details were omitted");
+                } else {
+                    for (Map.Entry<String, Map<Integer, JSONArray>> entry : blob.assertions().entrySet()) {
+                        JSONObject test = nativeTests.get(entry.getKey());
+                        if (test == null) continue;
+                        JSONArray attempts = test.getJSONArray("attempts");
+                        for (Map.Entry<Integer, JSONArray> attempt : entry.getValue().entrySet()) {
+                            if (attempt.getKey() < 0 || attempt.getKey() >= attempts.size()) continue;
+                            JSONArray steps = attempts.getJSONObject(attempt.getKey()).getJSONArray("steps");
+                            for (Object step : attempt.getValue()) if (steps.size() < 128) steps.add(step);
+                        }
+                    }
+                    assertionsAvailable = true;
+                }
+            } catch (IOException error) {
+                warn("Assertion details unavailable: " + error.getMessage());
+            }
+        }
 
         int expectedCount = stats.optInt("expected", 0) + stats.optInt("unexpected", 0)
                 + stats.optInt("flaky", 0) + stats.optInt("skipped", 0);
@@ -73,7 +101,7 @@ final class PlaywrightJson {
                 "durationMs", duration(stats.optDouble("duration", 0)),
                 "complete", complete);
         if (comparisonKey != null && !comparisonKey.isBlank()) run.put("comparisonKey", bounded(comparisonKey, 256));
-        JSONObject manifest = object("schemaVersion", "1.1.0", "producer", object("name", "playwright-json", "version", bounded(config.optString("version", "unknown"), 64)),
+        JSONObject manifest = object("schemaVersion", "1.1.0", "producer", object("name", assertionsAvailable ? "playwright-json+blob" : "playwright-json", "version", bounded(config.optString("version", "unknown"), 64)),
                 "run", run, "projects", normalizedProjects, "tests", tests, "warnings", warnings);
         byte[] result = manifest.toString().getBytes(StandardCharsets.UTF_8);
         if (result.length > Manifest.MAX_BYTES) throw new IOException("normalized report exceeds 25 MiB");
@@ -127,6 +155,8 @@ final class PlaywrightJson {
                     "outcome", nativeTest.optString("status", "expected"),
                     "attempts", attempts, "tags", tags, "annotations", annotations);
             tests.add(test);
+            String nativeId = spec.optString("id", "");
+            if (!nativeId.isEmpty()) nativeTests.put(nativeId, tests.getJSONObject(tests.size() - 1));
         }
     }
 

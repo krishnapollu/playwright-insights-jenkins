@@ -2,7 +2,7 @@
 <j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
   <l:layout title="Playwright Insights">
     <l:main-panel>
-      <link rel="stylesheet" href="${resURL}/plugin/playwright-insights/css/insights.css"/>
+      <link rel="stylesheet" href="${resURL}/plugin/playwright-insights/css/insights.css?v=2"/>
       <main class="pi">
         <header class="pi-brandbar">
           <div class="pi-brand"><span class="pi-brand__mark" aria-hidden="true"><i></i><i></i><i></i></span><span><strong>Playwright</strong><b>Insights</b></span></div>
@@ -15,7 +15,7 @@
             <span class="pi-eyebrow">RUN OVERVIEW · ${it.complete ? 'COMPLETE' : 'PARTIAL'}</span>
             <h1 id="pi-overview-title">Build ${it.buildName} results</h1>
             <p>${it.testCount} tests across ${it.projectSummaries.size()} ${it.projectSummaries.size() == 1 ? 'project' : 'projects'}. Review statuses, recent changes, and supporting evidence.</p>
-            <div class="pi-command__meta"><span>Started ${it.startedAt}</span><span>Duration ${it.durationDisplay}</span><span>Assertions recorded: ${it.assertionDetailAvailable ? it.recordedAssertions : 'not available in JSON'}</span></div>
+            <div class="pi-command__meta"><span>Started ${it.startedAt}</span><span>Duration ${it.durationDisplay}</span><span>Assertions recorded: ${it.assertionDetailAvailable ? it.recordedAssertions : 'add matching blob report'}</span></div>
           </div>
           <div class="pi-orbit" role="img" aria-label="${it.statusCounts.passed} passed, ${it.statusCounts.failed} failed, ${it.statusCounts.timedOut} timed out, ${it.statusCounts.skipped} skipped, ${it.statusCounts.interrupted} interrupted">
             <div class="pi-orbit__ring" style="${it.statusChartStyle}"><div class="pi-orbit__core"><strong>${it.testCount}</strong><span>TESTS</span></div></div>

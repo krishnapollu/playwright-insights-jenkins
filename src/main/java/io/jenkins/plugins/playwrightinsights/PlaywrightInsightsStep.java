@@ -23,6 +23,7 @@ public class PlaywrightInsightsStep extends Step {
     private final String results;
     private boolean failOnImportError;
     private String comparisonKey;
+    private String blob;
 
     @DataBoundConstructor
     public PlaywrightInsightsStep(String results) {
@@ -32,12 +33,16 @@ public class PlaywrightInsightsStep extends Step {
     public String getResults() { return results; }
     public boolean isFailOnImportError() { return failOnImportError; }
     public String getComparisonKey() { return comparisonKey; }
+    public String getBlob() { return blob; }
 
     @DataBoundSetter
     public void setFailOnImportError(boolean value) { failOnImportError = value; }
 
     @DataBoundSetter
     public void setComparisonKey(String value) { comparisonKey = value; }
+
+    @DataBoundSetter
+    public void setBlob(String value) { blob = value; }
 
     @Override
     public StepExecution start(StepContext context) {
@@ -49,12 +54,14 @@ public class PlaywrightInsightsStep extends Step {
         private final String results;
         private final boolean failOnImportError;
         private final String comparisonKey;
+        private final String blob;
 
         Execution(PlaywrightInsightsStep step, StepContext context) {
             super(context);
             results = step.results;
             failOnImportError = step.failOnImportError;
             comparisonKey = step.comparisonKey;
+            blob = step.blob;
         }
 
         @Override
@@ -63,7 +70,7 @@ public class PlaywrightInsightsStep extends Step {
             Run<?, ?> run = getContext().get(Run.class);
             try {
                 if (run.getAction(InsightsAction.class) != null) throw new IOException("one manifest per build is supported");
-                byte[] bytes = getContext().get(FilePath.class).act(new ReadManifest(results, comparisonKey));
+                byte[] bytes = getContext().get(FilePath.class).act(new ReadManifest(results, comparisonKey, blob));
                 Manifest manifest = Manifest.parse(bytes);
                 InsightsAction.save(run, bytes, manifest);
                 listener.getLogger().printf("Playwright Insights: imported %d logical tests (%d bytes, %d warnings)%n",
@@ -81,10 +88,12 @@ public class PlaywrightInsightsStep extends Step {
         private static final long serialVersionUID = 1L;
         private final String path;
         private final String comparisonKey;
+        private final String blob;
 
-        ReadManifest(String path, String comparisonKey) {
+        ReadManifest(String path, String comparisonKey, String blob) {
             this.path = path;
             this.comparisonKey = comparisonKey;
+            this.blob = blob;
         }
 
         @Override
@@ -97,7 +106,15 @@ public class PlaywrightInsightsStep extends Step {
             if (!Files.exists(file)) throw new IOException("manifest file not found");
             if (!file.toRealPath().startsWith(root) || !Files.isRegularFile(file)) throw new IOException("manifest is outside the workspace or not a file");
             if (Files.size(file) > Manifest.MAX_BYTES) throw new IOException("manifest exceeds 25 MiB");
-            return PlaywrightJson.normalize(Files.readAllBytes(file), root, comparisonKey);
+            Path blobFile = null;
+            if (blob != null && !blob.isBlank()) {
+                if (!blob.matches("^(?!\\.{1,2}(?:/|$))[A-Za-z0-9_@()+, .=-]+(/(?!\\.{1,2}(?:/|$))[A-Za-z0-9_@()+, .=-]+)*$"))
+                    throw new IOException("blob must be a workspace-relative path");
+                blobFile = root.resolve(blob).normalize();
+                if (Files.exists(blobFile) && (!blobFile.toRealPath().startsWith(root) || !Files.isRegularFile(blobFile)))
+                    throw new IOException("blob is outside the workspace or not a file");
+            }
+            return PlaywrightJson.normalize(Files.readAllBytes(file), root, comparisonKey, blobFile);
         }
     }
 

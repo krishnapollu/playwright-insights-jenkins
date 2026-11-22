@@ -1,6 +1,6 @@
 # Publishing Playwright Insights
 
-The Jenkins plugin (`playwright-insights`) is the only artifact required for the default setup, which imports Playwright's built-in JSON report. The separate reporter (`playwright-jenkins-insights`) is optional for richer step detail and redaction. Publishing the source on GitHub does not distribute either artifact.
+The Jenkins plugin (`playwright-insights`) is the only artifact required for the default setup, which imports Playwright's built-in JSON and blob reports. The separate reporter (`playwright-jenkins-insights`) is optional for richer API step detail and redaction. Publishing the source on GitHub does not distribute either artifact.
 
 ## Local release checks
 

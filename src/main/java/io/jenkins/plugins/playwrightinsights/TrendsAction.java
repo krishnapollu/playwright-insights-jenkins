@@ -18,6 +18,7 @@ public class TrendsAction implements Action {
     @Override public String getIconFileName() { return "graph.png"; }
     @Override public String getDisplayName() { return "Playwright Insights"; }
     @Override public String getUrlName() { return "playwright-trends"; }
+    public String getSpecsUrl() { return job.getUrl() + "playwright-specs/"; }
 
     public List<TrendRow> getRows() {
         job.checkPermission(Item.READ);
@@ -39,6 +40,8 @@ public class TrendsAction implements Action {
         }
         return rows;
     }
+
+    public SpecsAction.Summary getSpecSummary() { return SpecsAction.build(job).getSummary(); }
 
     public static class TrendRow {
         private final String build;
@@ -81,10 +84,8 @@ public class TrendsAction implements Action {
     public static class Factory extends TransientActionFactory<Job> {
         @Override public Class<Job> type() { return Job.class; }
         @Override public Collection<? extends Action> createFor(Job job) {
-            int examined = 0;
             for (Object value : job.getBuilds()) {
-                if (++examined > 20) break;
-                if (((Run<?, ?>) value).getAction(InsightsAction.class) != null) return List.of(new TrendsAction(job));
+                if (((Run<?, ?>) value).getAction(InsightsAction.class) != null) return List.of(new TrendsAction(job), new SpecsAction(job));
             }
             return List.of();
         }

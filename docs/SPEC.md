@@ -7,7 +7,7 @@
 **Primary audience:** QA engineers, SDETs, test automation leads, CI maintainers  
 **Repository model:** Monorepo with a Java/Jenkins plugin, an optional TypeScript reporter, JSON schema, fixtures, and documentation
 
-**Implementation update:** The plugin now accepts Playwright's built-in JSON report directly. The reporter and versioned manifest described below remain an optional enhanced path; see [the quickstart](QUICKSTART.md) for the default setup.
+**Implementation update:** The plugin now accepts Playwright's built-in JSON report and reads assertion steps from its built-in blob report. The reporter and versioned manifest described below remain an optional enhanced path; see [the quickstart](QUICKSTART.md) for the default setup.
 
 > **Product promise:** Investigate failures, track flaky tests, and understand Playwright execution without leaving Jenkins.
 

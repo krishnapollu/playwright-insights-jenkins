@@ -1,0 +1,52 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
+  <l:layout title="Spec history · Playwright Insights">
+    <l:main-panel>
+      <link rel="stylesheet" href="${resURL}/plugin/playwright-insights/css/insights.css?v=3"/>
+      <main class="pi">
+        <header class="pi-brandbar">
+          <div class="pi-brand"><span class="pi-brand__mark" aria-hidden="true"><i></i><i></i><i></i></span><span><strong>Playwright</strong><b>Insights</b></span></div>
+          <span class="pi-brandbar__context">Job dashboard · Spec history</span>
+        </header>
+        <nav class="pi-navigation" aria-label="Breadcrumb"><a href="${rootURL}/${it.dashboardUrl}">Job dashboard</a><span>Spec history</span></nav>
+        <section class="pi-command pi-command--history"><div class="pi-command__copy"><span class="pi-eyebrow">SPEC HEALTH</span><h1>Spec history</h1><p>Track spec and test outcomes across complete, comparable builds retained by Jenkins.</p></div></section>
+        <j:set var="model" value="${it.model}"/>
+        <j:set var="summary" value="${model.summary}"/>
+        <section class="pi-summary" aria-label="Spec history summary">
+          <div><span>Specs observed</span><strong>${summary.total}</strong><small>Across retained runs</small></div>
+          <div><span>Always passing</span><strong>${summary.alwaysPassing}</strong><small>Passed in every retained run</small></div>
+          <div><span>Failing</span><strong>${summary.failing}</strong><small>Latest result needs review</small></div>
+          <div><span>With retry passes</span><strong>${summary.retrySpecs}</strong><small>Playwright flaky outcome</small></div>
+          <div><span>With changing tests</span><strong>${summary.mixedSpecs}</strong><small>Met and missed expectation</small></div>
+          <div><span>Runs compared</span><strong>${summary.runs}</strong><small>Jenkins retained builds</small></div>
+        </section>
+        <j:choose><j:when test="${model.specs.size() == 0}"><div class="pi-notice" role="status">No comparable spec history is available yet. Set a stable comparisonKey for complete, unfiltered runs.</div></j:when>
+          <j:otherwise>
+            <div class="pi-spec-layout">
+              <section class="pi-surface pi-spec-list" aria-labelledby="pi-spec-list-title">
+                <div class="pi-section-head"><div><span class="pi-section-no">SPECS</span><h2 id="pi-spec-list-title">Spec files</h2></div><span class="pi-section-note">${model.specs.size()} observed</span></div>
+                <j:forEach var="spec" items="${model.specs}">
+                  <a class="pi-spec-item ${model.selected.id == spec.id ? 'is-selected' : ''}" href="?spec=${spec.id}">
+                    <span class="pi-spec-item__title">${spec.file}</span>
+                    <span class="pi-spec-item__meta">${spec.project} · ${spec.testCount} tests · ${spec.observedRuns}/${summary.runs} runs</span>
+                    <span class="pi-status pi-status--${spec.latestStatus}">${spec.latestLabel}</span>
+                  </a>
+                </j:forEach>
+              </section>
+              <section class="pi-surface pi-spec-detail" aria-labelledby="pi-spec-title">
+                <div class="pi-section-head"><div><span class="pi-section-no">SPEC DETAIL · ${model.selected.project}</span><h2 id="pi-spec-title">${model.selected.file}</h2></div><span class="pi-status pi-status--${model.selected.latestStatus}">${model.selected.latestLabel}</span></div>
+                <p class="pi-spec-note">${model.selected.testCount} tests observed in ${model.selected.observedRuns} of ${summary.runs} comparable runs. A missing run means the spec was not reported in that build.</p>
+                <div class="pi-spec-signals"><j:if test="${model.selected.retryObserved}"><span>Test passed after retry</span></j:if><j:if test="${model.selected.mixedHistory}"><span>Test outcome changed across builds</span></j:if></div>
+                <h3>Run history</h3>
+                <div class="pi-spec-runs" role="list"><j:forEach var="outcome" items="${model.selected.runs}"><a role="listitem" href="${rootURL}/${outcome.url}"><strong>${outcome.build}</strong><span class="pi-status pi-status--${outcome.status}">${outcome.label}</span><span aria-hidden="true">→</span></a></j:forEach></div>
+                <h3>Tests in this spec</h3>
+                <div class="pi-spec-tests"><j:forEach var="test" items="${model.selected.tests}"><div class="pi-spec-test"><div class="pi-spec-test__head"><div><strong>${test.title}</strong><small>Line ${test.line}</small></div><span class="pi-status pi-status--${test.health}">${test.healthLabel}</span></div><div class="pi-spec-test__runs" aria-label="Test history"><j:forEach var="outcome" items="${test.runs}"><a href="${rootURL}/${outcome.url}" class="pi-spec-test__run pi-spec-test__run--${outcome.status}" title="${outcome.build}: ${outcome.label}, ${outcome.duration}">${outcome.build}<span>${outcome.label}</span></a></j:forEach></div></div></j:forEach></div>
+              </section>
+            </div>
+            <p class="pi-spec-footnote">Playwright calls a test flaky when it passes after a retry in the same run. “With changing tests” means a test met expectation in some retained builds and did not in others. The counts can overlap. A spec’s badge shows its latest aggregate result. “Always passing” requires every comparable retained run to report passing tests without retries or skips.</p>
+          </j:otherwise>
+        </j:choose>
+      </main>
+    </l:main-panel>
+  </l:layout>
+</j:jelly>

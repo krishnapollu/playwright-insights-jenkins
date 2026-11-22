@@ -25,6 +25,76 @@ import jenkins.model.Jenkins;
 
 @WithJenkins
 class PlaywrightInsightsStepTest {
+    @Test void specHistoryUsesRetainedComparableBuilds(JenkinsRule j) throws Exception {
+        WorkflowJob job = j.createProject(WorkflowJob.class, "spec-history");
+        job.setDefinition(new CpsFlowDefinition("node { echo 'sample' }", true));
+        net.sf.json.JSONObject first = net.sf.json.JSONObject.fromObject(Files.readString(Path.of("schema", "fixtures", "outcomes.json")));
+        net.sf.json.JSONArray tests = first.getJSONArray("tests");
+        net.sf.json.JSONObject passing = tests.getJSONObject(0);
+        net.sf.json.JSONObject recovering = tests.getJSONObject(1);
+        passing.put("file", "tests/account.spec.ts");
+        recovering.put("file", "tests/checkout.spec.ts");
+        first.put("tests", net.sf.json.JSONArray.fromObject(java.util.List.of(passing, recovering)));
+        WorkflowRun one = j.buildAndAssertSuccess(job);
+        byte[] firstBytes = first.toString().getBytes(StandardCharsets.UTF_8);
+        InsightsAction.save(one, firstBytes, Manifest.parse(firstBytes));
+
+        net.sf.json.JSONObject second = net.sf.json.JSONObject.fromObject(first.toString());
+        net.sf.json.JSONObject recovered = second.getJSONArray("tests").getJSONObject(1);
+        recovered.put("outcome", "expected");
+        recovered.getJSONArray("attempts").getJSONObject(0).put("status", "passed");
+        WorkflowRun two = j.buildAndAssertSuccess(job);
+        byte[] secondBytes = second.toString().getBytes(StandardCharsets.UTF_8);
+        InsightsAction.save(two, secondBytes, Manifest.parse(secondBytes));
+
+        SpecsAction.Model model = SpecsAction.build(job);
+        assertEquals(2, model.getSummary().getRuns());
+        assertEquals(2, model.getSummary().getTotal());
+        assertEquals(1, model.getSummary().getAlwaysPassing());
+        assertEquals(0, model.getSummary().getRetrySpecs());
+        assertEquals(1, model.getSummary().getMixedSpecs());
+        String dashboard = j.createWebClient().goTo(job.getUrl() + "playwright-trends/").getWebResponse().getContentAsString();
+        assertTrue(dashboard.contains("Explore spec and test history"));
+        String specs = j.createWebClient().goTo(job.getUrl() + "playwright-specs/").getWebResponse().getContentAsString();
+        assertTrue(specs.contains("tests/account.spec.ts"));
+        assertTrue(specs.contains("tests/checkout.spec.ts"));
+        assertTrue(specs.contains("Always passing"));
+        assertTrue(specs.contains("Mixed history"));
+        assertTrue(specs.contains("?test=fail-1"));
+        SpecsAction.SpecRow account = model.getSpecs().stream().filter(row -> row.getFile().contains("account")).findFirst().orElseThrow();
+        String selected = j.createWebClient().goTo(job.getUrl() + "playwright-specs/?spec=" + account.getId())
+                .getWebResponse().getContentAsString();
+        assertTrue(selected.contains("Line 1"));
+
+        one.delete();
+        SpecsAction.Summary retained = SpecsAction.build(job).getSummary();
+        assertEquals(1, retained.getRuns());
+        assertEquals(0, retained.getAlwaysPassing());
+        assertEquals(0, retained.getMixedSpecs());
+
+        net.sf.json.JSONObject partial = net.sf.json.JSONObject.fromObject(second.toString());
+        net.sf.json.JSONObject retry = net.sf.json.JSONObject.fromObject(Files.readString(Path.of("schema", "fixtures", "outcomes.json")))
+                .getJSONArray("tests").getJSONObject(2);
+        retry.put("file", "tests/retry.spec.ts");
+        net.sf.json.JSONObject failedBesideRetry = net.sf.json.JSONObject.fromObject(first.toString()).getJSONArray("tests").getJSONObject(1);
+        failedBesideRetry.put("file", "tests/retry.spec.ts");
+        partial.put("tests", net.sf.json.JSONArray.fromObject(java.util.List.of(partial.getJSONArray("tests").getJSONObject(0), retry, failedBesideRetry)));
+        WorkflowRun three = j.buildAndAssertSuccess(job);
+        byte[] partialBytes = partial.toString().getBytes(StandardCharsets.UTF_8);
+        InsightsAction.save(three, partialBytes, Manifest.parse(partialBytes));
+        SpecsAction.Model missing = SpecsAction.build(job);
+        SpecsAction.SpecRow checkout = missing.getSpecs().stream().filter(row -> row.getFile().contains("checkout")).findFirst().orElseThrow();
+        assertEquals("absent", checkout.getHealth());
+        assertEquals("absent", checkout.getRuns().get(0).getStatus());
+        assertEquals(1, checkout.getObservedRuns());
+        assertEquals(1, missing.getSummary().getAlwaysPassing());
+        assertEquals(1, missing.getSummary().getRetrySpecs());
+        assertEquals(0, missing.getSummary().getMixedSpecs());
+        SpecsAction.SpecRow retrySpec = missing.getSpecs().stream().filter(row -> row.getFile().contains("retry")).findFirst().orElseThrow();
+        assertEquals("failed", retrySpec.getLatestStatus());
+        assertTrue(retrySpec.isRetryObserved());
+    }
+
     @Test void pipelineImportsAndShowsLogicalResults(JenkinsRule j) throws Exception {
         String fixture = Files.readString(Path.of("schema", "fixtures", "outcomes.json"))
                 .replace("\"name\": \"chromium\"", "\"name\": \"Chrome browser\"");
@@ -185,12 +255,12 @@ class PlaywrightInsightsStepTest {
         assertTrue(detail.contains("Payment failed"));
         assertTrue(detail.contains("Payment diagnostic"));
         assertTrue(detail.contains("Place order"));
-        assertTrue(detail.contains("Assertions recorded: not available in JSON"));
+        assertTrue(detail.contains("Assertions recorded: add matching blob report"));
         assertTrue(detail.contains("<img"));
         assertTrue(detail.contains("<video"));
         assertTrue(detail.contains("Trace recording"));
         assertTrue(j.createWebClient().goTo(job.getUrl() + "playwright-trends/")
-                .getWebResponse().getContentAsString().contains("Not in Playwright JSON"));
+                .getWebResponse().getContentAsString().contains("Add a matching blob report"));
         assertTrue(Files.exists(Path.of(run.getRootDir().toString(), "archive", "test-results", "playwright-insights")));
         byte[] partial = PlaywrightJson.normalize(report.replace("\"unexpected\":1", "\"unexpected\":2")
                 .getBytes(StandardCharsets.UTF_8), j.jenkins.getRootDir().toPath(), null);
@@ -219,17 +289,27 @@ class PlaywrightInsightsStepTest {
 
     @Test void realPlaywrightJsonImports(JenkinsRule j) throws Exception {
         String path = System.getProperty("playwright.insights.realJson");
-        Assumptions.assumeTrue(path != null, "run scripts/phase0.sh for this end-to-end check");
+        String blobPath = System.getProperty("playwright.insights.realBlob");
+        Assumptions.assumeTrue(path != null && blobPath != null, "run scripts/phase0.sh for this end-to-end check");
         String report = Files.readString(Path.of(path));
         String base64 = Base64.getEncoder().encodeToString(report.getBytes(StandardCharsets.UTF_8));
+        String blob64 = Base64.getEncoder().encodeToString(Files.readAllBytes(Path.of(blobPath)));
         WorkflowJob job = j.createProject(WorkflowJob.class, "real-json");
         job.setDefinition(new CpsFlowDefinition("node { writeFile file: 'results.json', text: '" + base64
-                + "', encoding: 'Base64'; playwrightInsights results: 'results.json' }", true));
+                + "', encoding: 'Base64'; writeFile file: 'results.zip', text: '" + blob64
+                + "', encoding: 'Base64'; playwrightInsights results: 'results.json', blob: 'results.zip' }", true));
         WorkflowRun run = j.buildAndAssertSuccess(job);
         InsightsAction action = run.getAction(InsightsAction.class);
         assertNotNull(action);
         assertEquals(6, action.getTestCount());
         assertEquals(2, action.getCounts().get("unexpected"));
         assertEquals(1, action.getCounts().get("flaky"));
+        assertTrue(action.isAssertionDetailAvailable());
+        assertTrue(action.getRecordedAssertions() > 0);
+        net.sf.json.JSONObject differentRun = net.sf.json.JSONObject.fromObject(report);
+        differentRun.getJSONObject("stats").put("startTime", "2000-01-01T00:00:00.000Z");
+        Manifest unmatched = Manifest.parse(PlaywrightJson.normalize(differentRun.toString().getBytes(StandardCharsets.UTF_8),
+                j.jenkins.getRootDir().toPath(), null, Path.of(blobPath)));
+        assertEquals("playwright-json", unmatched.root().getJSONObject("producer").getString("name"));
     }
 }
