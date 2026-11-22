@@ -9,11 +9,11 @@
   </parent>
   <groupId>io.jenkins.plugins</groupId>
   <artifactId>playwright-insights</artifactId>
-  <version>${revision}${changelist}</version>
+  <version>${changelist}</version>
   <packaging>hpi</packaging>
   <name>Playwright Insights</name>
   <description>Playwright test results, history, and evidence in Jenkins</description>
-  <url>https://github.com/krishnapollu/playwright-insights-jenkins</url>
+  <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
   <licenses>
     <license>
       <name>MIT License</name>
@@ -28,18 +28,22 @@
     <tag>${scmTag}</tag>
   </scm>
   <properties>
-    <revision>0.1</revision>
-    <changelist>-SNAPSHOT</changelist>
-    <gitHubRepo>krishnapollu/playwright-insights-jenkins</gitHubRepo>
-    <jenkins.version>2.568.3</jenkins.version>
-    <java.level>21</java.level>
+    <changelist>999999-SNAPSHOT</changelist>
+    <gitHubRepo>jenkinsci/playwright-insights-plugin</gitHubRepo>
+    <jenkins.baseline>2.568</jenkins.baseline>
+    <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+    <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
+    <banObsoleteDependencyOverrides.skip>false</banObsoleteDependencyOverrides.skip>
+    <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
+    <ban-deprecated-stapler.skip>false</ban-deprecated-stapler.skip>
+    <ban-commons-lang-2.skip>false</ban-commons-lang-2.skip>
   </properties>
   <dependencyManagement>
     <dependencies>
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
-        <artifactId>bom-2.568.x</artifactId>
-        <version>7312.v55b_41644b_77d</version>
+        <artifactId>bom-${jenkins.baseline}.x</artifactId>
+        <version>7401.vf0f166b_7fd69</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
