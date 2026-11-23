@@ -15,7 +15,7 @@ public class TrendsAction implements Action {
 
     private TrendsAction(Job<?, ?> job) { this.job = job; }
 
-    @Override public String getIconFileName() { return "graph.png"; }
+    @Override public String getIconFileName() { return "symbol-analytics"; }
     @Override public String getDisplayName() { return "Playwright Insights"; }
     @Override public String getUrlName() { return "playwright-trends"; }
     public String getSpecsUrl() { return job.getUrl() + "playwright-specs/"; }

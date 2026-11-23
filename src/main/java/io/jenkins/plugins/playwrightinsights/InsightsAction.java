@@ -47,7 +47,7 @@ public class InsightsAction implements RunAction2, Serializable {
 
     @Override public void onAttached(Run<?, ?> run) { this.run = run; }
     @Override public void onLoad(Run<?, ?> run) { this.run = run; }
-    @Override public String getIconFileName() { return "graph.png"; }
+    @Override public String getIconFileName() { return "symbol-analytics"; }
     @Override public String getDisplayName() { return "Playwright Insights"; }
     @Override public String getUrlName() { return "playwright-insights"; }
 
