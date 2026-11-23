@@ -22,6 +22,8 @@ import org.kohsuke.stapler.DataBoundSetter;
 public class PlaywrightInsightsStep extends Step {
     private final String results;
     private boolean failOnImportError;
+    // A non-secret label used to group comparable runs.
+    @SuppressWarnings("lgtm[jenkins/plaintext-storage]")
     private String comparisonKey;
     private String blob;
 
@@ -53,6 +55,7 @@ public class PlaywrightInsightsStep extends Step {
         private static final long serialVersionUID = 1L;
         private final String results;
         private final boolean failOnImportError;
+        @SuppressWarnings("lgtm[jenkins/plaintext-storage]")
         private final String comparisonKey;
         private final String blob;
 
@@ -87,6 +90,7 @@ public class PlaywrightInsightsStep extends Step {
     private static class ReadManifest extends MasterToSlaveFileCallable<byte[]> implements Serializable {
         private static final long serialVersionUID = 1L;
         private final String path;
+        @SuppressWarnings("lgtm[jenkins/plaintext-storage]")
         private final String comparisonKey;
         private final String blob;
 
